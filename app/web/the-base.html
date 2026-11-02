@@ -170,11 +170,26 @@
     get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   };
-  // Items keep their source's own id (a Frappe lead name, say), so "done" marks survive a refresh.
+  // Items keep their source's own id (a Frappe lead name, say). A "done" mark is saved against the id
+  // plus the item's stamp (its follow-up date, message time...), so it survives a refresh but doesn't
+  // carry over to the next follow-up on the same lead.
   ITEMS.forEach((it, i) => it.id = it.id || "s" + i);
-  store.get("cc-added", []).forEach(a => ITEMS.push(a));
+  const doneKey = it => it.id + "|" + (it.stamp || "");
+  const todayIso = new Date().toLocaleDateString("en-CA");   // YYYY-MM-DD in local time
   const doneMap = store.get("cc-done", {});
-  ITEMS.forEach(it => { if (it.id in doneMap) it.done = doneMap[it.id]; });
+
+  // Your own tasks age like everything else: an open one from an earlier day shows as overdue,
+  // and ticked ones from earlier days are cleared away.
+  const added = store.get("cc-added", []).filter(a => {
+    a.stamp = a.stamp || todayIso;   // tasks saved before this change had no date
+    const days = Math.round((new Date(todayIso) - new Date(a.stamp)) / 86400000);
+    if (days > 0 && doneMap[doneKey(a)]) return false;
+    if (days > 0) Object.assign(a, { due: "overdue", late: days, when: `Added ${days} day${days > 1 ? "s" : ""} ago` });
+    return true;
+  });
+  store.set("cc-added", added);
+  added.forEach(a => ITEMS.push(a));
+  ITEMS.forEach(it => { if (doneMap[doneKey(it)]) it.done = true; });
   // My list lives in a plain file on D: (data\my-list.md); the app saves every change there.
   function saveList() {
     fetch("/api/my-list", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(MY_LIST) });
@@ -197,12 +212,14 @@
 
   function setDone(id, done) {
     const it = ITEMS.find(i => i.id === id);
-    it.done = done; doneMap[id] = done; store.set("cc-done", doneMap);
+    it.done = done;
+    if (done) doneMap[doneKey(it)] = true; else delete doneMap[doneKey(it)];
+    store.set("cc-done", doneMap);
   }
 
   // A task you add goes on the track right after `afterId`, or at the end.
   function addTask(title, area, afterId) {
-    const item = { id: "L" + Date.now(), area, stage: "", src: "local", title: esc(title), sub: "Added by you", when: "Today", due: "today", done: false, onTrack: true };
+    const item = { id: "L" + Date.now(), stamp: todayIso, area, stage: "", src: "local", title: esc(title), sub: "Added by you", when: "Today", due: "today", done: false, onTrack: true };
     const at = afterId ? ITEMS.findIndex(i => i.id === afterId) + 1 : ITEMS.length;
     ITEMS.splice(at, 0, item);
     store.set("cc-added", ITEMS.filter(i => i.src === "local"));
@@ -896,9 +913,10 @@
 
   function act(el) {
     const a = el.closest("[data-act]");
-    if (a) { setDone(a.dataset.id, a.dataset.act === "done"); render(); return true; }
+    // Ids are stored escaped (see cleanData) and the browser un-escapes attributes, so escape again to match.
+    if (a) { setDone(esc(a.dataset.id), a.dataset.act === "done"); render(); return true; }
     const go = el.closest("[data-goto]");
-    if (go) { selected = { kind: "step", id: go.dataset.goto }; render(); return true; }
+    if (go) { selected = { kind: "step", id: esc(go.dataset.goto) }; render(); return true; }
     const tk = el.closest("[data-tick]");
     if (tk) { const t = MY_LIST[+tk.dataset.tick]; t.done = !t.done; saveList(); render(); return true; }
     return false;
@@ -908,7 +926,9 @@
     e.preventDefault();
     const form = e.target, text = form.t.value.trim();
     if (!text) return;
-    const [kind, key] = form.dataset.add.split(":");
+    // "after:<id>" or "group:<key>"; ids can contain colons (Slack ids do), so split at the first one only.
+    const target = form.dataset.add, cut = target.indexOf(":");
+    const kind = cut < 0 ? target : target.slice(0, cut), key = cut < 0 ? "" : esc(target.slice(cut + 1));
     if (kind === "list") {
       MY_LIST.push({ text, done: false }); saveList();
     } else if (kind === "after") {
@@ -927,7 +947,7 @@
     const t = e.target.closest("[data-kind]");
     if (!t) { selected = null; render(); return; }
     const k = t.dataset.kind;
-    selected = k === "step" ? { kind: k, id: t.dataset.id } : (k === "group" || k === "protest") ? { kind: k, key: t.dataset.key } : { kind: k };
+    selected = k === "step" ? { kind: k, id: esc(t.dataset.id) } : (k === "group" || k === "protest") ? { kind: k, key: t.dataset.key } : { kind: k };
     render();
   });
   document.getElementById("next").addEventListener("click", e => act(e.target));

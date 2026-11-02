@@ -83,7 +83,7 @@ def lead_item(lead, today):
     due_on = date.fromisoformat(lead["custom_next_followup_date"])
     late = (today - due_on).days
     if late > 0:
-        due, when = "overdue", f"{late} day{'s' if late > 1 else ''} late"
+        due, when = "overdue", f"{plural(late, 'day')} late"
     elif late == 0:
         due, when = "today", "Today"
     else:
@@ -93,6 +93,7 @@ def lead_item(lead, today):
     what = lead["custom_next_action_note"] or f"Follow up · {lead['custom_pipeline_stage'] or 'no stage'}"
     return {
         "id": lead["name"],
+        "stamp": lead["custom_next_followup_date"],   # a "done" mark only holds for this follow-up date
         "area": area,
         "stage": stage,
         "src": "frappe",
@@ -113,26 +114,33 @@ def frappe_items(today):
     try:
         leads = fetch_leads(today)
         fetched_at = datetime.now().isoformat(timespec="seconds")
-        CACHE.mkdir(parents=True, exist_ok=True)
-        cache.write_text(json.dumps({"fetchedAt": fetched_at, "leads": leads}), encoding="utf-8")
+        write_atomic(cache, json.dumps({"fetchedAt": fetched_at, "leads": leads}))
         status = "ok"
     except Exception as e:  # offline, Frappe down, or key missing
-        if not cache.exists():
+        try:
+            saved = json.loads(cache.read_text(encoding="utf-8"))
+            leads, fetched_at, status = saved["leads"], saved["fetchedAt"], "stale"
+        except (OSError, ValueError, KeyError):
             return [], {}, {"status": "error", "refreshedAt": None, "note": str(e)[:120]}
-        saved = json.loads(cache.read_text(encoding="utf-8"))
-        leads, fetched_at, status = saved["leads"], saved["fetchedAt"], "stale"
 
-    items, backlog = [], {}
+    items, backlog, skipped = [], {}, 0
     for lead in leads:
-        if (lead["custom_pipeline_stage"] or "") not in STAGES:
+        if (lead.get("custom_pipeline_stage") or "") not in STAGES:
             continue
-        item = lead_item(lead, today)
+        try:
+            item = lead_item(lead, today)
+        except (ValueError, KeyError, TypeError):  # one odd record (say, an impossible date) mustn't hide the rest
+            skipped += 1
+            continue
         if item["late"] > BACKLOG_DAYS:
             backlog[item["area"]] = backlog.get(item["area"], 0) + 1
             continue
         items.append(item)
 
-    return items, backlog, {"status": status, "refreshedAt": fetched_at}
+    result = {"status": status, "refreshedAt": fetched_at}
+    if skipped:
+        result["note"] = f"{plural(skipped, 'lead')} couldn't be read and {'was' if skipped == 1 else 'were'} left out"
+    return items, backlog, result
 
 
 # ---------- Feeds written by scheduled Claude tasks (Slack first) ----------
@@ -150,6 +158,21 @@ def plural(n, word):
     return f"{n} {word}{'s' if n != 1 else ''}"
 
 
+def local_time(text):
+    """An ISO time as local wall-clock time. Times with an offset (+05:30, or Z for UTC) are converted,
+    not just stripped, so a UTC time doesn't read 5.5 hours early."""
+    t = datetime.fromisoformat(text)
+    return t.astimezone().replace(tzinfo=None) if t.tzinfo else t
+
+
+def write_atomic(path, text):
+    """Write via a temporary file, so a reader never sees half a file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
 def feed_item(raw, src, now):
     """A feed entry becomes a track item. Each kind has its own idea of today and overdue:
     replies and drafts age from when they arrived; invites and meetings count to their start;
@@ -158,7 +181,7 @@ def feed_item(raw, src, now):
     today = now.date()
     late, stage = 0, FEED_STAGE.get(kind, "")
     if kind in ("reply", "draft"):
-        received = datetime.fromisoformat(raw["receivedAt"]).replace(tzinfo=None)
+        received = local_time(raw["receivedAt"])
         age = (today - received.date()).days
         if kind == "draft":
             due, when = ("today", "Draft · today") if age == 0 else ("overdue", f"Draft · {plural(age, 'day')} old")
@@ -166,7 +189,7 @@ def feed_item(raw, src, now):
             due, when = ("today", f"Today {received:%H:%M}") if age == 0 else ("overdue", f"{plural(age, 'day')} waiting")
         late = age
     elif kind in ("rsvp", "event"):
-        at = datetime.fromisoformat(raw["eventAt"]).replace(tzinfo=None)
+        at = local_time(raw["eventAt"])
         if at < now:
             return None
         days = (at.date() - today).days
@@ -189,10 +212,12 @@ def feed_item(raw, src, now):
         if stage == "To fill":
             when = when.replace("Post", "Fill")
     else:  # fyi
-        received = datetime.fromisoformat(raw["receivedAt"]).replace(tzinfo=None)
+        received = local_time(raw["receivedAt"])
         due, when = "week", f"FYI · {received.day} {received:%b}"
     return {
-        "id": raw["id"], "area": raw.get("area", "other"), "stage": raw.get("stage", stage),
+        # A "done" mark only holds for this version of the item (the same message, invite time or post date).
+        "id": raw["id"], "stamp": raw.get("receivedAt") or raw.get("eventAt") or raw.get("dueOn") or "",
+        "area": raw.get("area", "other"), "stage": raw.get("stage", stage),
         "src": src, "title": raw["title"], "sub": raw.get("sub", ""), "when": when, "due": due,
         "late": late, "done": False, "url": raw.get("url"),
         "priority": LATER_PRIORITY[kind] if kind in LATER_PRIORITY and due == "week" else
@@ -207,12 +232,24 @@ def read_feed(src, now):
         return [], [], not_connected()
     try:
         feed = json.loads(path.read_text(encoding="utf-8"))
-        made = datetime.fromisoformat(feed["generatedAt"]).replace(tzinfo=None)
-        items = [i for i in (feed_item(raw, src, now) for raw in feed.get("items", [])) if i]
-    except (ValueError, KeyError, TypeError) as e:
+        made = local_time(feed["generatedAt"])
+    except (OSError, ValueError, KeyError, TypeError) as e:
         return [], [], {"status": "error", "refreshedAt": None, "note": f"{src}.json couldn't be read: {e}"[:120]}
+    # One odd entry is skipped and reported; the rest of the feed still shows.
+    items, skipped = [], 0
+    for raw in feed.get("items", []):
+        try:
+            item = feed_item(raw, src, now)
+        except (ValueError, KeyError, TypeError, AttributeError):
+            skipped += 1
+            continue
+        if item:
+            items.append(item)
     stale = now - made > timedelta(hours=FEED_STALE_HOURS)
-    return items, feed.get("runs", []), {"status": "stale" if stale else "ok", "refreshedAt": made.isoformat(timespec="seconds")}
+    result = {"status": "stale" if stale else "ok", "refreshedAt": made.isoformat(timespec="seconds")}
+    if skipped:
+        result["note"] = f"{skipped} {'entry was' if skipped == 1 else 'entries were'} left out because they couldn't be read"
+    return items, feed.get("runs", []), result
 
 
 # ---------- Scoreboard (clients-and-revenue.md) ----------
@@ -284,11 +321,15 @@ def read_my_list():
 
 
 def write_my_list(items):
-    """Saves the list as a checklist anyone can open in Notepad."""
-    DATA.mkdir(parents=True, exist_ok=True)
+    """Saves the list as a checklist anyone can open in Notepad. Each task stays on one line."""
+    if not isinstance(items, list):
+        raise ValueError("expected a list of tasks")
     lines = ["# My list", "", "_Personal tasks and homework. Edit here or in the Command Centre._", ""]
-    lines += [f"- [{'x' if i.get('done') else ' '}] {str(i.get('text', '')).strip()}" for i in items if str(i.get("text", "")).strip()]
-    MY_LIST_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    for i in items:
+        text = " ".join(str(i.get("text", "")).split()) if isinstance(i, dict) else ""
+        if text:
+            lines.append(f"- [{'x' if i.get('done') else ' '}] {text}")
+    write_atomic(MY_LIST_FILE, "\n".join(lines) + "\n")
 
 
 def frappe_rules():
@@ -320,6 +361,23 @@ def frappe_rules():
 
 def not_connected():
     return {"status": "not_connected", "refreshedAt": None}
+
+
+def empty(note):
+    """A complete but empty data set, so the page can show 'no data yet' instead of breaking."""
+    return {
+        "ITEMS": [],
+        "BACKLOG": {"counts": {}, "days": BACKLOG_DAYS, "url": f"{FRAPPE}/app/lead"},
+        "RULES": frappe_rules(),
+        "MY_LIST": [],
+        "RUNS": [],
+        "SCORE": None,
+        "META": {
+            "refreshedAt": None,
+            "sources": [{"key": key, "label": label, "status": "error", "refreshedAt": None, "note": note}
+                        for key, label in SOURCES],
+        },
+    }
 
 
 def collect():
