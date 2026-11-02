@@ -128,7 +128,22 @@
   body.dark .next .k { color: var(--gold); }
   .next .t { font-weight: 600; }
   .next .s { font-size: 12px; color: var(--ui-sub); }
-  .hint { position: absolute; right: 24px; bottom: 24px; font-size: 12px; color: var(--ui-sub); background: var(--ui-bg); opacity: .85; padding: 4px 10px; border-radius: 999px; }
+  .ctrls { position: absolute; right: 24px; bottom: 20px; display: flex; align-items: center; gap: 4px; background: var(--ui-bg); border: 2px solid var(--ui-edge); border-radius: 14px; box-shadow: 4px 4px 0 var(--ui-edge); padding: 4px; z-index: 4; }
+  .ctrls button { width: 32px; height: 32px; border: 0; border-radius: 9px; background: none; color: var(--ui-ink); font: 700 18px var(--sm-font-sans); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+  .ctrls button:hover { background: var(--ui-line); }
+  .ctrls button.on { background: var(--blau); color: var(--sm-paper); }
+  body.dark .ctrls button.on { background: var(--gold); color: var(--sm-night); }
+  .ctrls .sep { width: 1px; height: 20px; background: var(--ui-line); margin: 0 2px; }
+  .stage.dragging { cursor: grabbing; }
+
+  /* Names off: only the numbers stay; hovering a building or its number shows the name. */
+  body.compact .label { gap: 0; padding: 2px; pointer-events: auto; cursor: pointer; }
+  body.compact .label .nm, body.compact .label.nonum { display: none; }
+  body.compact .label.show, body.compact .label:hover { gap: 6px; padding: 2px 8px; z-index: 3; }
+  body.compact .label.show .nm, body.compact .label:hover .nm { display: inline; }
+  body.compact .label.nonum.show { display: flex; }
+
+  .hint { position: absolute; right: 24px; bottom: 74px; font-size: 12px; color: var(--ui-sub); background: var(--ui-bg); opacity: .85; padding: 4px 10px; border-radius: 999px; }
 </style>
 </head>
 <body class="ph-day">
@@ -150,7 +165,17 @@
     <div class="pop" id="pop" hidden></div>
   </div>
   <div class="next" id="next"></div>
-  <div class="hint">Click the pitch, buildings, fans or the big screen for details</div>
+  <div class="hint">Click the pitch, buildings, fans or the big screen for details. Drag to move when zoomed in.</div>
+  <div class="ctrls" id="ctrls">
+    <button data-c="out" title="Zoom out" aria-label="Zoom out">−</button>
+    <button data-c="in" title="Zoom in" aria-label="Zoom in">+</button>
+    <button data-c="fit" title="Fit to screen" aria-label="Fit to screen"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    <span class="sep"></span>
+    <button data-c="labels" title="Show or hide names (numbers stay)" aria-label="Show or hide names"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h7l5 5-5 5H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="5.2" cy="8" r="1.3" fill="currentColor"/></svg></button>
+    <span class="sep"></span>
+    <button data-c="spiral" title="Spiral pass map" aria-label="Spiral pass map"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M8 8a1.4 1.4 0 0 1 1.4 1.4A2.8 2.8 0 0 1 6.6 12.2 4.2 4.2 0 0 1 2.4 8 5.6 5.6 0 0 1 8 2.4 7 7 0 0 1 15 9.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button data-c="shuffle" title="Shuffle the pass map" aria-label="Shuffle the pass map"><svg viewBox="0 0 16 16" width="15" height="15"><rect x="2" y="2" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="5.5" cy="5.5" r="1.2" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/></svg></button>
+  </div>
 </div>
 
 <script src="helpers.js"></script>
@@ -243,12 +268,15 @@
 
   // Landmarks around the stadium, one per work area (in AREAS order), plus a spare for "My tasks".
   // None sits in front of the pitch, so nothing hides a task.
-  const BUILDING_SLOTS = [[14.6, .3], [10.9, .3], [.6, 4.6], [3.6, .3], [16, 5.2], [5.6, 13.6], [.6, 8.6]];
+  // [x, y, width, depth]. Club offices and Ciutat Esportiva run the length of the back stand;
+  // La Masia and Palau stand together on the left side.
+  const BUILDING_SLOTS = [[10.1, -.4, 4.7, 2.4], [4.8, -.2, 4.6, 2.1], [.4, 3.5, 2, 2], [.4, 6.6, 2, 2], [16, 5.2, 2, 2], [5.6, 13.6, 2, 2], [.4, 9.7, 2, 2]];
   const STYLES = ["training", "office", "masia", "arena", "museum", "fanzone", "house"];
   const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "Manager's house" };
   const NOTICE_BOARD = [1.4, 12.4], WATCHTOWER = [17, 13.6];
-  const LAMPS = [[4, 3.4], [9.5, 3.4], [15.2, 3.4], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [4, 8]];
-  const TREES = [[1, 2.6], [2.6, 3], [7.4, 2.6], [8.6, .6], [13.6, 2.6], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [14.2, 14.6], [12, 14.8], [9.6, 15], [3.4, 14.6], [.6, 11.2], [2.8, 7.2], [3, 10.4], [17.6, 15]];
+  // Nothing stands between you and the big screen (above the back stand, x 8 to 11.4).
+  const LAMPS = [[4, 3.4], [6.2, 3.3], [12.9, 3.3], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [4, 8]];
+  const TREES = [[1, 2.4], [2.6, 2.8], [16, 1.4], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [14.2, 14.6], [12, 14.8], [9.6, 15], [3.4, 14.6], [.6, 12], [2.9, 6], [2.9, 9.2], [17.6, 15]];
 
   // How the base looks at each time of day.
   const PHASES = {
@@ -381,19 +409,24 @@
   const BLAU = "#004D98", GRANA = "#A50044", GOLD = "#EDBB00", TURF = "#3F9B52", TURF2 = "#4AA85C";
   const shadowUnder = (x, y, w, d) => poly([iso(x - .2, y - .1), iso(x + w + .3, y - .1), iso(x + w + .3, y + d + .2), iso(x - .2, y + d + .2)], "rgba(0,0,0,.13)");
 
-  // Ciutat Esportiva: a training pitch with goals and a small clubhouse at the back.
-  function training(x, y, h) {
-    let s = shadowUnder(x, y, 2, 2) + poly([iso(x, y), iso(x + 2, y), iso(x + 2, y + 2), iso(x, y + 2)], TURF);
-    for (let i = 0; i < 4; i++) s += poly([iso(x + i * .5, y + .7), iso(x + i * .5 + .25, y + .7), iso(x + i * .5 + .25, y + 2), iso(x + i * .5, y + 2)], TURF2);
-    s += poly([iso(x + .1, y + .75), iso(x + 1.9, y + .75), iso(x + 1.9, y + 1.95), iso(x + .1, y + 1.95)], "none", 'stroke="#fff" stroke-width="1.2"');
-    s += `<line x1="${iso(x + 1, y + .75)[0]}" y1="${iso(x + 1, y + .75)[1]}" x2="${iso(x + 1, y + 1.95)[0]}" y2="${iso(x + 1, y + 1.95)[1]}" stroke="#fff" stroke-width="1"/>`;
-    [[x + .1, y + 1.35], [x + 1.9, y + 1.35]].forEach(([gx, gy]) => {
-      const a = iso(gx, gy - .2, 0), b = iso(gx, gy + .2, 0);
-      s += `<path d="M${a[0]},${a[1]} V${a[1] - 9} L${b[0]},${b[1] - 9} V${b[1]}" fill="none" stroke="#fff" stroke-width="1.4"/>`;
-    });
+  // Ciutat Esportiva: training pitches side by side, with a long clubhouse along the back.
+  function training(x, y, h, w = 2, d = 2) {
+    let s = shadowUnder(x, y, w, d) + poly([iso(x, y), iso(x + w, y), iso(x + w, y + d), iso(x, y + d)], TURF);
+    const fields = Math.max(1, Math.round(w / 2.2)), fw = w / fields, top = y + .7;
+    for (let f = 0; f < fields; f++) {
+      const fx = x + f * fw;
+      for (let i = 0; i < 4; i++) s += poly([iso(fx + i * fw / 4, top), iso(fx + (i + .5) * fw / 4, top), iso(fx + (i + .5) * fw / 4, y + d), iso(fx + i * fw / 4, y + d)], TURF2);
+      s += poly([iso(fx + .1, top + .05), iso(fx + fw - .1, top + .05), iso(fx + fw - .1, y + d - .05), iso(fx + .1, y + d - .05)], "none", 'stroke="#fff" stroke-width="1.2"');
+      const m1 = iso(fx + fw / 2, top + .05), m2 = iso(fx + fw / 2, y + d - .05);
+      s += `<line x1="${m1[0]}" y1="${m1[1]}" x2="${m2[0]}" y2="${m2[1]}" stroke="#fff" stroke-width="1"/>`;
+      [fx + .1, fx + fw - .1].forEach(gx => {
+        const mid = (top + y + d) / 2, a = iso(gx, mid - .2, 0), b = iso(gx, mid + .2, 0);
+        s += `<path d="M${a[0]},${a[1]} V${a[1] - 9} L${b[0]},${b[1] - 9} V${b[1]}" fill="none" stroke="#fff" stroke-width="1.4"/>`;
+      });
+    }
     const hh = Math.max(20, h * .55);
-    s += box(x + .1, y + .05, 1.8, .55, hh, "#E6EBEA") + walls(x + .1, y + .05, 1.8, .55, hh, "glass") + windows(x + .1, y + .05, 1.8, .55, hh);
-    s += box(x + .06, y + .01, 1.88, .63, 3, BLAU, hh);
+    s += box(x + .1, y + .05, w - .2, .55, hh, "#E6EBEA") + walls(x + .1, y + .05, w - .2, .55, hh, "glass") + windows(x + .1, y + .05, w - .2, .55, hh);
+    s += box(x + .06, y + .01, w - .12, .63, 3, BLAU, hh);
     return { svg: s, peak: hh + 10 };
   }
 
@@ -443,15 +476,14 @@
     return { svg: s, peak: 66 };
   }
 
-  function building(x, y, h, color, style) {
-    if (style === "training") return training(x, y, h);
+  function building(x, y, h, color, style, w = 2, d = 2) {
+    if (style === "training") return training(x, y, h, w, d);
     if (style === "masia") return masia(x, y, h);
     if (style === "arena") return arena(x, y, h);
     if (style === "museum") return museum(x, y, h);
     if (style === "fanzone") return fanzone(x, y, h);
     if (style === "lab") return lab(x, y, h, color);
     if (style === "palace") return palace(x, y, h);
-    const w = 2, d = 2;
     let s = poly([iso(x - .2, y - .1), iso(x + w + .3, y - .1), iso(x + w + .3, y + d + .2), iso(x - .2, y + d + .2)], "rgba(0,0,0,.13)");
     s += box(x - .08, y - .08, w + .16, d + .16, 5, "#C4C9C8");
     s += box(x, y, w, d, h, color, 5);
@@ -671,17 +703,23 @@
   const CONCRETE = "#C9CED2";
 
   // Seat rows in Blaugrana with a sprinkling of fans, drawn flat on a stand's pitch-facing wall.
-  const seatFace = (frame, width, height) => `<g transform="${frame}"><rect width="${width}" height="${height}" fill="url(#pt-seats)"/>
-    <rect width="${width}" height="${height}" fill="url(#pt-crowd)"/><rect width="${width}" height="2" fill="rgba(255,255,255,.5)"/></g>`;
+  // The lowest tier carries a gold LED ribbon along its edge; the top tier sits on a band of glass VIP boxes.
+  const seatFace = (frame, width, height, tier) => `<g transform="${frame}"><rect width="${width}" height="${height}" fill="url(#pt-seats)"/>
+    <rect width="${width}" height="${height}" fill="url(#pt-crowd)"/>
+    ${[0, .25, .5, .75].map(f => `<rect x="${width * f + width / 8}" width="2.2" height="${height}" fill="rgba(201,206,210,.85)"/>`).join("")}
+    <rect width="${width}" height="2" fill="${tier === 0 ? GOLD : "rgba(255,255,255,.55)"}"/>
+    ${tier === 2 ? `<rect y="${height - 8}" width="${width}" height="8" fill="#16283A"/><rect y="${height - 8}" width="${width}" height="8" fill="url(#pt-vip)"/>` : ""}</g>`;
 
-  // The two back stands rise in three tiers; their walls face the pitch, so the view stays open.
+  const ROOF_LIFT = 72;
+
+  // The two back stands rise in three tiers under a white cantilever roof; their walls face the pitch.
   function backStands(objects) {
     // Back-right stand: runs along x on the far side (small y).
     let y = PITCH.y0 - .2, below = 0;
     SEAT_TIERS.forEach((t, i) => {
       y -= t.depth;
       const x0 = 5.6 - i * .4, x1 = 13.6 + i * .4;
-      objects.push({ z: x0 + y - 1, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below) });
+      objects.push({ z: x0 + y - 1, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below, i) });
       below = t.h;
     });
     // Back-left stand: runs along y on the near-left side (small x).
@@ -689,11 +727,47 @@
     SEAT_TIERS.forEach((t, i) => {
       x -= t.depth;
       const y0 = 5.1 - i * .4, y1 = 10.9 + i * .4;
-      objects.push({ z: x + y0 - 1, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below) });
+      objects.push({ z: x + y0 - 1, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below, i) });
       below = t.h;
     });
-    // The tall back corner that joins them.
-    objects.push({ z: 8, svg: box(STANDS.x0, STANDS.y0, 1.2, 1.2, 48, CONCRETE) + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 48, "stone", false) });
+    // The corner that joins them: a glass-clad tower with Blaugrana fins.
+    objects.push({ z: 8, svg: box(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "#2B3E55") + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "glass", false) +
+      `<g transform="${shearL(STANDS.x0, STANDS.y0 + 1.2, 62)}">${[0, 1, 2, 3].map(i => `<rect x="${6 + i * 10}" width="3" height="57" fill="${i % 2 ? GRANA : BLAU}"/>`).join("")}</g>` });
+    objects.push({ z: 8.6, svg: roofs() });
+  }
+
+  // White cantilever roofs over the back stands, on slim columns, with a gold LED edge facing the pitch.
+  function roofs() {
+    const r1 = [4.6, 3.55, 14.6, 5.15], r2 = [3.55, 4.6, 5.15, 11.7];   // [x0, y0, x1, y1]
+    let s = "";
+    [[r1[0] + .3, r1[1] + .15], [7.5, r1[1] + .15], [10.5, r1[1] + .15], [r1[2] - .3, r1[1] + .15], [r2[0] + .15, 7.4], [r2[0] + .15, r2[3] - .3]].forEach(([cx, cy]) => {
+      const a = iso(cx, cy, 48), b = iso(cx, cy, ROOF_LIFT);
+      s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#A6ABAA" stroke-width="2.4"/>`;
+    });
+    [r1, r2].forEach(([x0, y0, x1, y1]) => {
+      const top = [iso(x0, y0, ROOF_LIFT), iso(x1, y0, ROOF_LIFT), iso(x1, y1, ROOF_LIFT), iso(x0, y1, ROOF_LIFT)];
+      s += poly(top.map(([px, py]) => [px, py + 5]), "rgba(0,0,0,.12)") + poly(top, "rgba(250,252,252,.92)", 'stroke="#C4C9C8" stroke-width=".8"');
+      s += `<g transform="${shearTop(x0, y0, ROOF_LIFT)}"><rect width="${(x1 - x0) * 36}" height="${(y1 - y0) * 36}" fill="url(#pt-truss)"/></g>`;
+    });
+    // LED edges along the pitch side of each roof.
+    const e1 = [iso(r1[0], r1[3], ROOF_LIFT), iso(r1[2], r1[3], ROOF_LIFT)], e2 = [iso(r2[2], r2[1], ROOF_LIFT), iso(r2[2], r2[3], ROOF_LIFT)];
+    [e1, e2].forEach(([a, b]) => s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${GOLD}" stroke-width="2"/>`);
+    if (PHASES[phase].lit) [e1, e2].forEach(([a, b]) => lights.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#FFE27A" stroke-width="3" opacity=".9"/>`));
+    return s;
+  }
+
+  // Advertising boards round the pitch, in alternating Blaugrana panels.
+  function adBoards(objects) {
+    const { x0, x1, y0, y1 } = PITCH;
+    for (let x = x0; x < x1 - .01; x += 1) {
+      objects.push({ z: x + y0 - .4, svg: box(x, y0 - .45, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? GRANA : BLAU) });
+      objects.push({ z: x + y1 + .6, svg: box(x, y1 + .4, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? BLAU : GRANA) });
+    }
+    for (let y = y0; y < y1 - .01; y += 1) {
+      objects.push({ z: x0 + y - .4, svg: box(x0 - .45, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? GRANA : BLAU) });
+      if (y > CENTRE[1] - 1.2 && y < CENTRE[1] + .2) continue;   // a gap behind the goal
+      objects.push({ z: x1 + y + .6, svg: box(x1 + .5, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? BLAU : GRANA) });
+    }
   }
 
   // The front two stands are half-built: a low finished section, then bare frames and a crane,
@@ -707,8 +781,6 @@
     // Front-right: finished from the far end to halfway, then scaffolding up to the corner.
     objects.push({ z: x + 5.5 + 1, svg: box(x, 5.4, .6, 2.8, 12, CONCRETE) + `<g transform="${shearTop(x, 5.4, 12)}"><rect width="${.6 * 36}" height="${2.8 * 36}" fill="url(#pt-seats)"/></g>` });
     objects.push({ z: x + 9.5 + 1, svg: scaffold(x, 8.4, .6, 2.6, 26, "y") });
-    // The crane stands behind the back-right corner so its mast never crosses the pitch on screen.
-    objects.push({ z: 15.8 + 2.9, svg: crane(15.8, 2.9) });
   }
 
   // Bare frames of the stand still being built.
@@ -730,22 +802,14 @@
     return s;
   }
 
-  // A tower crane at the front corner, jib swinging over the unfinished stands.
-  function crane(x, y) {
-    const [bx, by] = iso(x, y), top = by - 150;
-    return `<rect x="${bx - 3}" y="${top}" width="6" height="150" fill="${GOLD}"/>
-      ${Array.from({ length: 12 }, (_, i) => `<path d="M${bx - 3},${top + i * 12.5} L${bx + 3},${top + (i + 1) * 12.5}" stroke="#B45309" stroke-width=".8"/>`).join("")}
-      <rect x="${bx - 120}" y="${top - 6}" width="160" height="6" fill="${GOLD}"/><rect x="${bx + 24}" y="${top - 4}" width="16" height="14" fill="#494D4C"/>
-      <rect x="${bx - 8}" y="${top - 14}" width="16" height="10" fill="#494D4C"/>
-      <line x1="${bx - 100}" y1="${top}" x2="${bx - 100}" y2="${top + 50}" stroke="#272B2A" stroke-width="1"/><rect x="${bx - 106}" y="${top + 50}" width="12" height="8" fill="#686D6C"/>`;
-  }
-
   // Floodlight masts at the four corners; at dusk and night they light the pitch.
   // The front-right mast sits further out than the others so it never crosses the pitch on screen.
   const FLOODLIGHTS = [[4, 3.5], [14.8, 3.2], [4, 12.5], [16.8, 10.8]];
   function floodlight(x, y) {
     const [bx, by] = iso(x, y), top = by - 128, lit = PHASES[phase].lit;
-    if (lit) lights.push(`<circle cx="${bx}" cy="${top}" r="34" fill="url(#bulb)"/>`);
+    // Four lamps per mast, each with its own glow, plus a soft halo round the head.
+    if (lit) lights.push(`<circle cx="${bx}" cy="${top - 5}" r="26" fill="url(#bulb)" opacity=".55"/>` +
+      [0, 1, 2, 3].map(i => `<circle cx="${bx - 11 + i * 7.3}" cy="${top - 5}" r="9" fill="url(#bulb)"/>`).join(""));
     return `<rect x="${bx - 2}" y="${top}" width="4" height="128" fill="#686D6C"/>
       <rect x="${bx - 16}" y="${top - 12}" width="32" height="14" rx="2" fill="#272B2A"/>
       ${[0, 1, 2, 3].map(i => `<circle cx="${bx - 11 + i * 7.3}" cy="${top - 5}" r="2.6" fill="${lit ? "#FFF4C2" : "#C4C9C8"}"/>`).join("")}`;
@@ -753,11 +817,12 @@
 
   // The big screen above the back stand doubles as the scoreboard.
   function bigScreen() {
-    const x = 8, y = PITCH.y0 - 1.6, w = 3.4 * W / 2, z = 48 + 44;
+    // It sits on top of the roof, so nothing on the stand or behind it can cover it.
+    const x = 8, y = PITCH.y0 - 1.6, w = 3.4 * W / 2, z = ROOF_LIFT + 50;
     const score = SCORE ? `${SCORE.clients} PAYING · ${SCORE.mrr || "—"} MRR${SCORE.mrrUnconfirmed ? " (CHECK)" : ""}` : "SCOREBOARD NOT CONNECTED";
-    const [a, b] = [iso(x + .4, y + .1, 48), iso(x + 3, y + .1, 48)];
+    const [a, b] = [iso(x + .4, y + .1, ROOF_LIFT), iso(x + 3, y + .1, ROOF_LIFT)];
     return `<g class="clickable" data-kind="screen">
-      <line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 8}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 8}" stroke="#494D4C" stroke-width="3"/>
+      <line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 10}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 10}" stroke="#494D4C" stroke-width="3"/>
       <g transform="${shearL(x, y + .1, z)}">
         <rect width="${w}" height="40" rx="2" fill="#0A0D0C" stroke="#272B2A" stroke-width="2"/>
         <rect x="3" y="3" width="${w - 6}" height="9" fill="${BLAU}"/><rect x="3" y="3" width="${(w - 6) / 2}" height="9" fill="${GRANA}"/>
@@ -862,16 +927,50 @@
     const f = (d - len[i - 1]) / ((len[i] - len[i - 1]) || 1);
     return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
   }
+  // The pass map is a spiral, or a shuffled layout scattered across the pitch (the shuffle button
+  // picks a new seed). Either way kick-off comes first and the goal last, joined by one line.
+  let passMap = store.get("cc-passmap", "spiral");
+
   // Positions are returned as tile corners (centre minus half a tile), like the rest of the drawing code.
   function trackLayout(steps) {
-    const tasks = steps.length - 2, gap = Math.min(1, SPIRAL.total / (tasks + .5)), jit = rng(42);
-    const centres = steps.map((s, n) => {
-      if (n === 0) return CENTRE;
-      if (n === steps.length - 1) return GOAL;
-      const [x, y] = spiralAt(n * gap);
-      return [x + (jit() - .5) * .12 * gap, y + (jit() - .5) * .12 * gap];
-    });
+    const tasks = steps.length - 2;
+    let gap, inner;
+    if (passMap === "spiral") {
+      gap = Math.min(1, SPIRAL.total / (tasks + .5));
+      const jit = rng(42);
+      inner = Array.from({ length: tasks }, (_, i) => {
+        const [x, y] = spiralAt((i + 1) * gap);
+        return [x + (jit() - .5) * .12 * gap, y + (jit() - .5) * .12 * gap];
+      });
+    } else {
+      ({ gap, inner } = scattered(tasks, passMap));
+    }
+    const centres = [CENTRE, ...inner, GOAL];
     return { gap, centres, at: n => [centres[n][0] - .5, centres[n][1] - .5] };
+  }
+
+  // Shuffled pass map: one point in each of a grid of cells across the pitch (jittered, kept clear of
+  // the kick-off spot), visited nearest-first from kick-off so the line wanders without tangling much.
+  function scattered(tasks, seed) {
+    const r = rng(+seed || 1), m = .4, L = PITCH.x1 - PITCH.x0 - 2 * m, D = PITCH.y1 - PITCH.y0 - 2 * m;
+    const cols = Math.max(2, Math.ceil(Math.sqrt((tasks + 2) * L / D))), rows = Math.max(2, Math.ceil((tasks + 2) / cols));
+    const cw = L / cols, ch = D / rows;
+    let cells = [];
+    for (let c = 0; c < cols; c++) for (let w = 0; w < rows; w++) {
+      const x = PITCH.x0 + m + (c + .5) * cw, y = PITCH.y0 + m + (w + .5) * ch;
+      if (Math.hypot(x - CENTRE[0], y - CENTRE[1]) > .55) cells.push([x, y]);
+    }
+    for (let i = cells.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+    let left = cells.slice(0, tasks).map(([x, y]) => [x + (r() - .5) * cw * .5, y + (r() - .5) * ch * .5]);
+    const inner = [];
+    let at = CENTRE;
+    while (left.length) {
+      let best = 0;
+      left.forEach((p, i) => { if (Math.hypot(p[0] - at[0], p[1] - at[1]) < Math.hypot(left[best][0] - at[0], left[best][1] - at[1])) best = i; });
+      at = left.splice(best, 1)[0];
+      inner.push(at);
+    }
+    return { gap: Math.min(1, cw, ch), inner };
   }
 
   function daySteps() {
@@ -899,13 +998,13 @@
         path += `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="start"><ellipse cx="${cx}" cy="${cy}" rx="${rx + 6}" ry="${ry + 3}" fill="rgba(255,255,255,.25)"/><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#FCFFFE"/></g>`;
         // Label the kick-off at the far end of the halfway line, clear of the passes around the centre.
         const [kx, ky] = iso(CENTRE[0], PITCH.y0 - .75, 16);
-        labels += `<div class="label small" style="left:${kx}px;top:${ky}px">Kick-off · ${s.when}</div>`;
+        labels += `<div class="label small nonum" data-for="start" style="left:${kx}px;top:${ky}px"><span class="nm">Kick-off · ${s.when}</span></div>`;
         return;
       }
       if (s.id === "finish") {
         const [cx, cy] = iso(...c);
         objects.push({ z: c[0] + c[1] + .2, svg: `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="finish">${goal(PITCH.x1, 1)}</g>` });
-        labels += `<div class="label small" style="left:${cx + 70}px;top:${cy + 4}px">Full time · ${s.when}</div>`;
+        labels += `<div class="label small nonum" data-for="finish" style="left:${cx + 70}px;top:${cy + 4}px"><span class="nm">Full time · ${s.when}</span></div>`;
         return;
       }
       const [cx, cy, rx, ry] = disc(c, rad, 2);
@@ -925,7 +1024,9 @@
     let pitchLight = "";
     backStands(objects);
     frontStands(objects);
-    objects.push({ z: 7.9, svg: bigScreen() });
+    adBoards(objects);
+    // Drawn after everything behind the stadium (the offices, trees and lamps at the back), so nothing covers it.
+    objects.push({ z: 14, svg: bigScreen() });
     FLOODLIGHTS.forEach(([x, y]) => objects.push({ z: x + y + .5, svg: floodlight(x, y) }));
     // Under the floodlights the pitch glows like a match night: beams from every mast, and a bright
     // wash over the grass (blended so the passes stay readable, just brighter).
@@ -942,18 +1043,18 @@
 
     // One building per group. More open work makes a taller building.
     groups.slice(0, BUILDING_SLOTS.length).forEach((g, n) => {
-      const [x, y] = BUILDING_SLOTS[n];
+      const [x, y, w = 2, d = 2] = BUILDING_SLOTS[n];
       const openCount = g.items.filter(i => !i.done).length;
       const h = 26 + Math.min(openCount, 8) * 10;
       const isSel = selected && selected.kind === "group" && selected.key === g.key;
-      const b = building(x, y, h, g.color, STYLES[n]);
+      const b = building(x, y, h, g.color, STYLES[n], w, d);
       objects.push({ z: x + y + 4, svg: `<g class="clickable ${isSel ? "sel" : ""}" data-kind="group" data-key="${g.key}">${b.svg}</g>` });
       const overdue = g.items.filter(i => i.due === "overdue" && !i.done).length;
-      if (overdue) objects.push({ z: x + y + 4.5, svg: `<g class="clickable ${selected && selected.kind === "protest" && selected.key === g.key ? "sel" : ""}" data-kind="protest" data-key="${g.key}">${protest(x, y + 2, overdue, n + 1)}</g>` });
-      const [lx, ly] = iso(x + 1, y + 1, b.peak + 10);
-      // In the Area view each building is a club landmark, with its work area underneath.
-      const name = mode === "area" ? `<span>${LANDMARKS[STYLES[n]]}<span class="sub">${g.label}</span></span>` : g.label;
-      labels += `<div class="label" style="left:${lx}px;top:${ly}px">${name}<span class="n" style="background:${openCount ? g.color : "#A6ABAA"}">${openCount}</span></div>`;
+      if (overdue) objects.push({ z: x + y + d + 2.5, svg: `<g class="clickable ${selected && selected.kind === "protest" && selected.key === g.key ? "sel" : ""}" data-kind="protest" data-key="${g.key}">${protest(x + w / 2 - 1, y + d, overdue, n + 1)}</g>` });
+      const [lx, ly] = iso(x + w / 2, y + d / 2, b.peak + 10);
+      // In the Area view: the work area big, the club landmark small underneath.
+      const name = mode === "area" ? `${g.label}<span class="sub">${LANDMARKS[STYLES[n]]}</span>` : g.label;
+      labels += `<div class="label" data-for="${g.key}" style="left:${lx}px;top:${ly}px"><span class="nm">${name}</span><span class="n" style="background:${openCount ? g.color : "#A6ABAA"}">${openCount}</span></div>`;
     });
 
     // Notice board (my list) and watchtower (last night's runs).
@@ -965,8 +1066,8 @@
       ${box(wt[0] + .05, wt[1] + .05, .9, .9, 8, "#494D4C", 70)}${pyramid(wt[0] + .05, wt[1] + .05, .9, .9, 78, failed ? "#B42318" : "#006E4A", 22)}</g>` });
     const [nx, ny] = iso(nb[0], nb[1] + 1.1, 84);
     const [wx, wy] = iso(wt[0] + .5, wt[1] + .5, 114);
-    labels += `<div class="label small" style="left:${nx}px;top:${ny}px">My list<span class="n" style="background:#B45309">${MY_LIST.filter(t => !t.done).length}</span></div>`;
-    labels += `<div class="label small" style="left:${wx}px;top:${wy}px">Night watch${failed ? `<span class="n" style="background:#B42318">${failed} !</span>` : ""}</div>`;
+    labels += `<div class="label small" data-for="list" style="left:${nx}px;top:${ny}px"><span class="nm">My list</span><span class="n" style="background:#B45309">${MY_LIST.filter(t => !t.done).length}</span></div>`;
+    labels += `<div class="label small ${failed ? "" : "nonum"}" data-for="runs" style="left:${wx}px;top:${wy}px"><span class="nm">Night watch</span>${failed ? `<span class="n" style="background:#B42318">${failed} !</span>` : ""}</div>`;
     if (PHASES[phase].lit) { const [bx, by] = iso(wt[0] + .5, wt[1] + .5, 74); lights.push(`<circle cx="${bx}" cy="${by}" r="18" fill="url(#bulb)"/>`); }
 
     TREES.forEach(([x, y], i) => objects.push({ z: x + y + 1, svg: tree(x, y, i % 3 === 0) }));
@@ -991,6 +1092,8 @@
       <pattern id="pt-siding" width="10" height="4" patternUnits="userSpaceOnUse"><path d="M0 3.6H10" stroke="rgba(0,0,0,.14)" stroke-width=".8"/><path d="M0 .4H10" stroke="rgba(255,255,255,.12)" stroke-width=".6"/></pattern>
       <radialGradient id="pitchGlow"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".5"/><stop offset=".6" stop-color="#FFF6D8" stop-opacity=".18"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></radialGradient>
       <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4C2" stop-opacity=".55"/><stop offset="1" stop-color="#FFF4C2" stop-opacity="0"/></linearGradient>
+      <pattern id="pt-vip" width="12" height="8" patternUnits="userSpaceOnUse"><rect x="1" y="1.5" width="10" height="5" fill="${PHASES[phase].lit ? "#F5D46A" : "#5B7A99"}" opacity=".8"/><path d="M0 0V8" stroke="#0A0D0C" stroke-width="1"/></pattern>
+      <pattern id="pt-truss" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M0 0L22 22M22 0L0 22" stroke="rgba(166,171,170,.35)" stroke-width=".7"/><path d="M0 .5H22" stroke="rgba(166,171,170,.5)" stroke-width=".8"/></pattern>
       <pattern id="pt-seats" width="10" height="6" patternUnits="userSpaceOnUse"><rect width="10" height="3" fill="${BLAU}"/><rect y="3" width="10" height="3" fill="${GRANA}"/><path d="M0 2.6H10M0 5.6H10" stroke="rgba(0,0,0,.25)" stroke-width=".6"/></pattern>
       <pattern id="pt-crowd" width="17" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#FCFFFE" opacity=".8"/><circle cx="7.5" cy="5" r="1.2" fill="${GOLD}" opacity=".85"/><circle cx="12" cy="1.6" r="1.2" fill="#E0AC69" opacity=".9"/><circle cx="15" cy="6.4" r="1.3" fill="#FCFFFE" opacity=".6"/><circle cx="4.5" cy="7" r="1.2" fill="#8D5524" opacity=".85"/></pattern>
       <pattern id="pt-net" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0L4 4M4 0L0 4" stroke="rgba(255,255,255,.55)" stroke-width=".5"/></pattern>
@@ -1096,8 +1199,8 @@
         ${addBox("Add a follow-up task…", "after:" + s.id)}`;
     } else if (selected.kind === "group" || selected.kind === "protest") {
       const g = groupItems(mode).find(g => g.key === selected.key), n = Object.keys(GROUPINGS[mode]).indexOf(selected.key);
-      const [x, y] = BUILDING_SLOTS[n];
-      color = g.color; anchor = iso(x + 1, y + 1, 40);
+      const [x, y, w = 2, d = 2] = BUILDING_SLOTS[n];
+      color = g.color; anchor = iso(x + w / 2, y + d / 2, 40);
       if (selected.kind === "protest") {
         const late = g.items.filter(i => i.due === "overdue" && !i.done);
         head = `<div><div class="k">Protest at ${g.label}</div><h3>${late.length} overdue</h3></div>`;
@@ -1163,6 +1266,14 @@
   document.getElementById("map").addEventListener("click", e => {
     if (e.target.closest("[data-close]")) { selected = null; render(); return; }
     if (e.target.closest("#pop")) { act(e.target); return; }
+    // With names off, the number pills are clickable: open what they belong to.
+    const lab = e.target.closest(".label[data-for]");
+    if (lab) {
+      const key = lab.dataset.for;
+      selected = ["list", "runs"].includes(key) ? { kind: key } : ["start", "finish"].includes(key) ? { kind: "step", id: key } : { kind: "group", key };
+      render();
+      return;
+    }
     const t = e.target.closest("[data-kind]");
     if (!t) { selected = null; render(); return; }
     const k = t.dataset.kind;
@@ -1182,18 +1293,101 @@
     else if (!e.target.closest("#scorepanel")) panel.hidden = true;
   });
 
-  // Fit the base into whatever space the window gives it.
+  // ---------- Zoom, pan and the bottom-right controls ----------
+
+  // Zoom is relative to "fit to screen": up to 2x (about double the pitch size), down to 0.7x.
+  const ZOOM_MIN = .7, ZOOM_MAX = 2;
+  let zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +store.get("cc-zoom", 1) || 1)), pan = [0, 0];
+  const stage = document.getElementById("stage");
+
   function fit() {
-    const st = document.getElementById("stage").getBoundingClientRect();
+    const st = stage.getBoundingClientRect();
     // The stadium and its landmarks are wider than The Base, so fit a wider area.
-    const s = Math.min(st.width / 1180, (st.height - 20) / 660, 1.3);
-    document.getElementById("map").style.transform = `translate(-50%, -50%) scale(${s})`;
+    const s = Math.min(st.width / 1180, (st.height - 20) / 660, 1.3) * zoom;
+    // Keep the view from drifting off the base entirely.
+    const lim = [st.width * (zoom - .4), st.height * (zoom - .4)].map(v => Math.max(60, v / 1.6));
+    pan = pan.map((p, i) => Math.max(-lim[i], Math.min(lim[i], p)));
+    document.getElementById("map").style.transform = `translate(-50%, -50%) translate(${pan[0]}px, ${pan[1]}px) scale(${s})`;
+  }
+  function setZoom(z) {
+    zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+    if (zoom <= 1) pan = [0, 0];
+    store.set("cc-zoom", zoom);
+    fit();
   }
   window.addEventListener("resize", fit);
+  stage.addEventListener("wheel", e => { e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
+
+  // Drag to move around. A real drag swallows the click that ends it, so it doesn't open a pop-up.
+  let drag = null, swallowClick = false;
+  stage.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.target.closest(".pop, .next, .ctrls")) return;
+    drag = { x: e.clientX, y: e.clientY, pan: [...pan], moved: false };
+  });
+  window.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+    drag.moved = true;
+    stage.classList.add("dragging");
+    pan = [drag.pan[0] + dx, drag.pan[1] + dy];
+    fit();
+  });
+  window.addEventListener("pointerup", () => {
+    if (drag && drag.moved) swallowClick = true;
+    drag = null;
+    stage.classList.remove("dragging");
+  });
+  stage.addEventListener("click", e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); swallowClick = false; } }, true);
+
+  // Names on or off. With names off, hovering a building (or its number) shows its name.
+  let compact = store.get("cc-compact", false);
+  const applyCompact = () => {
+    document.body.classList.toggle("compact", compact);
+    document.querySelector('[data-c="labels"]').classList.toggle("on", !compact);
+  };
+  const labelKey = el => {
+    const t = el.closest("[data-kind]");
+    if (!t) return null;
+    return t.dataset.kind === "group" || t.dataset.kind === "protest" ? t.dataset.key : t.dataset.kind === "step" ? t.dataset.id : t.dataset.kind;
+  };
+  document.getElementById("svg").addEventListener("mouseover", e => {
+    if (!compact) return;
+    const key = labelKey(e.target);
+    document.querySelectorAll(".label.show").forEach(l => l.classList.remove("show"));
+    if (key) document.querySelectorAll(`.label[data-for="${CSS.escape(esc(key))}"]`).forEach(l => l.classList.add("show"));
+  });
+  document.getElementById("svg").addEventListener("mouseleave", () => document.querySelectorAll(".label.show").forEach(l => l.classList.remove("show")));
+
+  const applyPassMap = () => {
+    document.querySelector('[data-c="spiral"]').classList.toggle("on", passMap === "spiral");
+    document.querySelector('[data-c="shuffle"]').classList.toggle("on", passMap !== "spiral");
+  };
+
+  document.getElementById("ctrls").addEventListener("click", e => {
+    const b = e.target.closest("[data-c]");
+    if (!b) return;
+    const c = b.dataset.c;
+    if (c === "in") setZoom(zoom * 1.25);
+    else if (c === "out") setZoom(zoom / 1.25);
+    else if (c === "fit") { pan = [0, 0]; setZoom(1); }
+    else if (c === "labels") { compact = !compact; store.set("cc-compact", compact); applyCompact(); }
+    else {
+      passMap = c === "spiral" ? "spiral" : String(Date.now() % 100000 + 1);
+      store.set("cc-passmap", passMap);
+      applyPassMap();
+      render();
+    }
+  });
+  applyCompact();
+  applyPassMap();
 
   function setScene(p, dark) {
     phase = PHASES[p] ? p : "day";
-    document.body.className = "ph-" + phase + (dark ? " dark" : "");
+    // Swap only the time-of-day classes, so other settings on the page (like names off) survive.
+    document.body.classList.remove("ph-morning", "ph-day", "ph-evening", "ph-night");
+    document.body.classList.add("ph-" + phase);
+    document.body.classList.toggle("dark", dark);
     document.getElementById("logo").src = dark ? "springmoney-logo-reversed.svg" : "springmoney-logo-primary.svg";
     render();
   }
