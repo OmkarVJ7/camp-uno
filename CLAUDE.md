@@ -19,4 +19,5 @@ A local desktop dashboard on Omkar's Windows PC: one beautiful screen that shows
 - Everything lives on D: (`D:\command-centre`): code, the Python environment (`.venv`), and app data (`data\`). Never install packages or write app data to C:, which is short on space. Keep dependencies small.
 - Layout: `app\` is the real app (`main.py` window + local server, `collectors.py` data, `web\` The Base page). `design-options\` holds the earlier mock-ups for reference only.
 - Build in small steps; show Omkar a screenshot after each visible change.
-- Commit to the GitHub repo once it exists (see BRIEF.md, open items).
+- Code lives in the private GitHub repo `OmkarVJ7/camp-uno` (branch `main`). Commit each finished change and push it. Never commit `data/` or `.venv/`.
+- Omkar is learning as we go: when a technical term comes up, add a one-line plain-words explanation.
