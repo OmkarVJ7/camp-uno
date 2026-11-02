@@ -169,19 +169,7 @@ def already_running():
         return False
 
 
-ICON = ROOT / "command-centre.ico"
-
-
-def use_brand_icon(window):
-    """Windows gives the window Python's icon; swap in the Spring Money mark once it's shown.
-    Purely cosmetic, so any problem here is ignored."""
-    try:
-        from System import Action
-        from System.Drawing import Icon
-        form = window.native
-        form.Invoke(Action(lambda: setattr(form, "Icon", Icon(str(ICON)))))
-    except Exception:
-        pass
+ICON = ROOT / "command-centre.ico"   # BMP-format frames: the window code can't read PNG ones
 
 
 PORT_TAKEN = f"""<body style="font-family:Segoe UI,sans-serif;padding:40px;color:#272B2A;background:#FCFFFE">
@@ -213,7 +201,7 @@ def main():
             webview.create_window("Command Centre", html=PORT_TAKEN, width=640, height=320)
             webview.start()
             return
-    window = webview.create_window(
+    webview.create_window(
         "Command Centre",
         f"http://127.0.0.1:{PORT}/",
         width=1440,
@@ -222,8 +210,8 @@ def main():
         maximized=True,
         background_color="#FCFFFE",
     )
-    window.events.shown += lambda: use_brand_icon(window)
-    webview.start(private_mode=False, storage_path=str(DATA / "webview"))
+    # The icon is given at start, so the window is created with it and the taskbar never shows Python's.
+    webview.start(private_mode=False, storage_path=str(DATA / "webview"), icon=str(ICON))
 
 
 if __name__ == "__main__":

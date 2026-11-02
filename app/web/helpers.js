@@ -92,9 +92,12 @@ function onGroupChange(fn) {
   window.addEventListener("message", e => { if (e.data && e.data.group) fn(e.data.group); });
 }
 
-// How many squares today's track holds: "auto" (everything due today) or a number.
+// How many tasks today's track holds: a number, or "all" (everything due today). 25 by default.
 function getDaySize() {
-  try { return localStorage.getItem("cc-day") || "auto"; } catch (e) { return "auto"; }
+  try { return localStorage.getItem("cc-day") || "25"; } catch (e) { return "25"; }
+}
+function dayCap(size) {
+  return size === "all" || size === "auto" ? Infinity : (+size || 25);
 }
 function onDaySize(fn) {
   window.addEventListener("message", e => { if (e.data && e.data.day) fn(e.data.day); });

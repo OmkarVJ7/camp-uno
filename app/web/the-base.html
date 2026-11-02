@@ -199,7 +199,7 @@
   // up to the day size chosen in the nav. Tasks you add yourself always ride the track.
   let daySize = getDaySize(), dueToday = 0;
   function assignTrack() {
-    const cap = Math.min(daySize === "auto" ? Infinity : +daySize, MAX_TRACK);
+    const cap = Math.min(dayCap(daySize), MAX_TRACK);
     let placed = 0;
     dueToday = 0;
     ITEMS.forEach(i => {

@@ -22,6 +22,7 @@
   .seg button { border: 0; background: none; font: 600 12px var(--sm-font-sans); padding: 6px 0; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); }
   .seg button.on { background: var(--sm-paper); color: var(--sm-text); box-shadow: 0 1px 3px rgba(39,43,42,.15); }
   .seg.four { grid-template-columns: repeat(4, 1fr); }
+  .seg.two { grid-template-columns: repeat(2, 1fr); }
   .now { font-size: 11px; color: var(--sm-text-secondary); padding: 6px 6px 0; }
   .refresh { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--sm-text); background: var(--sm-paper); color: var(--sm-text); border-radius: 8px; padding: 8px; font: 600 13px var(--sm-font-sans); cursor: pointer; }
   .refresh:hover { background: var(--sm-green-bg-1); }
@@ -109,6 +110,11 @@
   </div>
 
   <div class="sec">
+    <h4>Theme</h4>
+    <div class="seg two" id="skin"><button data-s="camp-nou">Camp Nou</button><button data-s="the-base">The Base</button></div>
+  </div>
+
+  <div class="sec">
     <h4>Group by <button class="info" id="rules-btn" title="How items are sorted" aria-label="How items are sorted">i</button></h4>
     <div class="seg" id="group">
       <button data-g="area">Area</button><button data-g="source">Channel</button><button data-g="urgency">Urgency</button>
@@ -118,7 +124,7 @@
   <div class="sec">
     <h4>Today's track</h4>
     <div class="seg four" id="day">
-      <button data-d="auto" title="Everything due today">Auto</button><button data-d="10">10</button><button data-d="15">15</button><button data-d="20">20</button>
+      <button data-d="10">10</button><button data-d="15">15</button><button data-d="25">25</button><button data-d="all" title="Everything due today">All</button>
     </div>
   </div>
 
@@ -143,7 +149,7 @@
 
   <div class="foot">Command Centre v0.1 · read-only.<br>Opens links; never sends or edits.</div>
 </nav>
-<iframe id="view" title="The Base" src="the-base.html"></iframe>
+<iframe id="view" title="Command Centre"></iframe>
 <dialog id="notes"><header><h3>Your feedback notes</h3><button data-close aria-label="Close">×</button></header><div class="body" id="notes-body"></div></dialog>
 <dialog id="rules"><header><h3>How items are sorted</h3><button data-close aria-label="Close">×</button></header><div class="body" id="rules-body"></div></dialog>
 
@@ -179,7 +185,7 @@
 
   function sendState() {
     const s = scene();
-    view.contentWindow && view.contentWindow.postMessage({ group: load("cc-group", "area"), day: load("cc-day", "auto"), phase: s.phase, dark: s.dark }, "*");
+    view.contentWindow && view.contentWindow.postMessage({ group: load("cc-group", "area"), day: load("cc-day", "25"), phase: s.phase, dark: s.dark }, "*");
   }
 
   const STATUS = {
@@ -201,7 +207,11 @@
     const group = load("cc-group", "area"), appearance = load("cc-appearance", "auto"), s = scene();
     document.querySelectorAll("[data-g]").forEach(b => b.classList.toggle("on", b.dataset.g === group));
     document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("on", b.dataset.a === appearance));
-    document.querySelectorAll("[data-d]").forEach(b => b.classList.toggle("on", b.dataset.d === load("cc-day", "auto")));
+    document.querySelectorAll("[data-d]").forEach(b => b.classList.toggle("on", b.dataset.d === load("cc-day", "25")));
+    // Theme: Camp Nou by default; switching swaps the page and the nav re-sends its settings on load.
+    const skin = load("cc-skin", "camp-nou");
+    document.querySelectorAll("[data-s]").forEach(b => b.classList.toggle("on", b.dataset.s === skin));
+    if (!view.src.endsWith(skin + ".html")) view.src = skin + ".html";
     document.body.classList.toggle("dark", s.dark);
     document.getElementById("now").textContent = s.note;
     sendState();
@@ -213,6 +223,11 @@
     const b = e.target.closest("[data-g]");
     if (b) { save("cc-group", b.dataset.g); render(); }
   });
+  document.getElementById("skin").addEventListener("click", e => {
+    const b = e.target.closest("[data-s]");
+    if (b) { save("cc-skin", b.dataset.s); render(); }
+  });
+  if (load("cc-day", "25") === "auto") save("cc-day", "25");   // "Auto" was replaced by 25 and All
   document.getElementById("day").addEventListener("click", e => {
     const b = e.target.closest("[data-d]");
     if (b) { save("cc-day", b.dataset.d); render(); }
@@ -254,8 +269,9 @@
         <div><b>${AREAS[area].label}</b><br>${stages.map(s => `<span class="tag">${s.stage} → ${s.label}</span>`).join(" ")}</div></div>`).join("")}
       <h5>What goes on the track</h5>
       <p>Everything due today or overdue (backlog aside), so a light day makes a short track and a heavy day a long one.
-        The track always stays inside your base: on a heavy day the squares sit closer together and a little smaller.
-        "Today's track" in this menu can cap it at 10, 15 or 20; Auto takes everything (up to 40).
+        In Camp Nou the day is a match: tasks spiral out from kick-off across the pitch and the last pass goes into the goal.
+        It always stays on the pitch: on a heavy day the passes sit closer together and a little smaller.
+        "Today's track" in this menu caps it at 10, 15 or 25 (the default); All takes everything due today.
         Tasks you add yourself always go on. Things due later in the week wait in their buildings.</p>
       <p>Frappe leads go closest to a deal first:</p>
       <ol>${r.order.map(s => `<li>${s}</li>`).join("")}</ol>

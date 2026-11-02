@@ -1,0 +1,1208 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Camp Nou</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+
+  /* Panel colours, swapped for dark panels at night. Camp Nou accents are Blaugrana. */
+  body {
+    --blau: #004D98; --grana: #A50044; --gold: #EDBB00;
+    --ui-bg: var(--sm-paper); --ui-ink: var(--sm-text); --ui-sub: var(--sm-text-secondary);
+    --ui-line: var(--sm-paper-p2); --ui-edge: var(--sm-text); --ui-chip: var(--sm-paper-p2);
+    --go-bg: var(--blau); --go-ink: var(--sm-paper);
+  }
+  body.dark {
+    --ui-bg: var(--sm-night-raised); --ui-ink: var(--sm-paper); --ui-sub: var(--sm-black-500);
+    --ui-line: var(--sm-black-800); --ui-edge: #000; --ui-chip: var(--sm-black-800);
+    --go-bg: var(--gold); --go-ink: var(--sm-night);
+  }
+
+  body { display: flex; flex-direction: column; color: var(--ui-ink); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.45; overflow: hidden; transition: background 1.2s; }
+  body.ph-morning { background: linear-gradient(180deg, #FDEBD3 0%, #EAF4F8 70%); }
+  body.ph-day { background: linear-gradient(180deg, #DCEEF8 0%, #F0FAF7 75%); }
+  body.ph-evening { background: linear-gradient(180deg, #F2A97E 0%, #E9C7C9 45%, #E9D9E6 100%); }
+  body.ph-night { background: linear-gradient(180deg, #05080B 0%, #0E1B2C 70%, #15263A 100%); }
+  .sample { background: var(--sm-amber-300); color: var(--sm-black-900); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; position: relative; z-index: 3; }
+
+  .top { display: flex; align-items: center; gap: 16px; padding: 12px 24px; position: relative; z-index: 3; }
+  .top img { height: 22px; }
+  .top h1 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 20px; }
+  .top .sp { flex: 1; }
+  .meta { font-size: 12px; color: var(--ui-sub); }
+  body.ph-evening .meta, body.ph-morning .meta { color: var(--sm-black-800); }
+  .res { display: flex; align-items: center; gap: 8px; background: var(--ui-bg); border: 1.5px solid var(--ui-edge); border-radius: 999px; padding: 4px 12px 4px 4px; font-size: 12px; box-shadow: 0 2px 0 var(--ui-edge); }
+  .res .ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--sm-paper); background: var(--blau); }
+  .res b { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .res.quiet { border-color: var(--ui-line); box-shadow: none; color: var(--ui-sub); }
+  .res.quiet .ic { background: var(--sm-black-500); }
+  .bar { width: 90px; height: 8px; border-radius: 999px; background: var(--ui-line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--blau), var(--grana)); transition: width var(--sm-duration-slow) var(--sm-ease-standard); }
+  .res[hidden] { display: none; }
+  .res.warn { background: #FEF3C7; border-color: var(--sm-amber-700); box-shadow: 0 2px 0 var(--sm-amber-700); color: #7A3E06; font-weight: 600; padding: 4px 12px; }
+  body.dark .res.warn { background: #3A2A0A; color: var(--sm-amber-300); }
+  button.res { font: inherit; font-size: 12px; color: var(--ui-sub); cursor: pointer; }
+  button.res:hover { border-color: var(--ui-edge); }
+  .scorepanel { position: absolute; right: 24px; top: 54px; width: 320px; background: var(--ui-bg); color: var(--ui-ink); border: 2px solid var(--ui-edge); border-radius: 14px; box-shadow: 4px 4px 0 var(--ui-edge); padding: 12px 14px; font-size: 13px; z-index: 6; }
+  .scorepanel h3 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 16px; margin-bottom: 2px; }
+  .scorepanel .big { display: flex; gap: 18px; margin: 8px 0 10px; }
+  .scorepanel .big b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .scorepanel .big span { font-size: 11px; color: var(--ui-sub); }
+  .scorepanel .row { display: flex; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ui-line); align-items: baseline; }
+  .scorepanel .row .n { min-width: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .scorepanel .row .names { color: var(--ui-sub); font-size: 12px; }
+  .scorepanel .src { font-size: 11px; color: var(--ui-sub); margin-top: 8px; word-break: break-all; }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; }
+
+  .stage { flex: 1; position: relative; overflow: hidden; }
+  body.ph-night .stage::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .8;
+    background-image:
+      radial-gradient(1.5px 1.5px at 8% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 18% 30%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 30% 8%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 44% 22%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 62% 10%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 74% 26%, #fff 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 86% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 94% 34%, #fff 50%, transparent 51%),
+      radial-gradient(24px 24px at 88% 9%, #F5F1DC 48%, transparent 52%);
+  }
+  .map { position: absolute; left: 50%; top: 50%; width: 1060px; height: 660px; transform-origin: center; }
+  .map svg { position: absolute; inset: 0; overflow: visible; }
+  .clickable { cursor: pointer; }
+  .clickable:hover { filter: brightness(1.06); }
+  .sel { filter: drop-shadow(0 0 4px #EDBB00) drop-shadow(0 0 8px #EDBB00); }
+  @keyframes kick { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  .ball { animation: kick 1.6s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .ball { animation: none; } }
+  @keyframes glow { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
+  .glow { animation: glow 2.4s var(--sm-ease-standard) infinite; }
+  @keyframes ripple { 0%, 100% { opacity: .25; } 50% { opacity: .6; } }
+  .ripple { animation: ripple 4s ease-in-out infinite; }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
+  .bob { animation: bob 1.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .glow, .ripple, .bob { animation: none; } }
+
+  .label { position: absolute; transform: translate(-50%, -100%); white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: 6px; background: var(--ui-bg); color: var(--ui-ink); border: 1.5px solid var(--ui-edge); border-radius: 8px; padding: 2px 8px; font-size: 12px; font-weight: 600; box-shadow: 0 2px 0 var(--ui-edge); }
+  .label .sub { display: block; font-size: 9.5px; font-weight: 500; color: var(--ui-sub); line-height: 1.1; }
+  .label .n { min-width: 18px; height: 18px; border-radius: 999px; display: grid; place-items: center; font-size: 11px; color: var(--sm-paper); padding: 0 5px; }
+  .label.small { font-size: 11px; padding: 1px 6px; }
+
+  .pop { position: absolute; width: 340px; background: var(--ui-bg); color: var(--ui-ink); border: 2px solid var(--ui-edge); border-radius: 14px; box-shadow: 4px 4px 0 var(--ui-edge); z-index: 5; overflow: hidden; }
+  .pop header { padding: 10px 14px; color: var(--sm-paper); display: flex; align-items: center; gap: 8px; }
+  .pop header .k { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+  .pop header h3 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 17px; line-height: 1.25; }
+  .pop header .x { margin-left: auto; border: 0; background: rgba(255,255,255,.2); color: var(--sm-paper); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 14px; flex: none; }
+  .pop .body { padding: 10px 14px 14px; max-height: 340px; overflow-y: auto; }
+  .pop .from { font-size: 12px; color: var(--ui-sub); margin-bottom: 6px; }
+  .it { display: flex; width: 100%; gap: 8px; align-items: center; padding: 7px 0; border: 0; border-top: 1px solid var(--ui-line); background: none; color: inherit; font: 13px var(--sm-font-sans); text-align: left; cursor: pointer; }
+  .it:hover .m { text-decoration: underline; }
+  .it .m { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .it .w { font-size: 12px; color: var(--ui-sub); white-space: nowrap; }
+  .it.done .m { text-decoration: line-through; color: var(--ui-sub); }
+  .chip { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--ui-chip); color: var(--ui-ink); white-space: nowrap; }
+  .chip.mine { background: var(--sm-green-bg-2); color: var(--sm-green-900); }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin: 4px 0 12px; }
+  .facts dt { color: var(--ui-sub); }
+  .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .go { display: inline-block; background: var(--go-bg); color: var(--go-ink); font: 600 13px var(--sm-font-sans); padding: 7px 14px; border-radius: 8px; text-decoration: none; white-space: nowrap; border: 0; cursor: pointer; }
+  .btn2 { border: 1.5px solid var(--ui-edge); background: var(--ui-bg); color: var(--ui-ink); border-radius: 8px; padding: 6px 12px; font: 600 13px var(--sm-font-sans); cursor: pointer; white-space: nowrap; }
+  .btn2:hover { background: var(--ui-line); }
+  .note { font-size: 11px; color: var(--ui-sub); margin-top: 8px; }
+  .add { display: flex; gap: 6px; margin-top: 12px; }
+  .add input { flex: 1; min-width: 0; border: 1.5px solid var(--ui-line); background: var(--ui-bg); color: var(--ui-ink); border-radius: 8px; padding: 6px 10px; font: 13px var(--sm-font-sans); }
+  .add input:focus { outline: 2px solid var(--sm-green-500); border-color: transparent; }
+  .late { color: var(--sm-red-700) !important; font-weight: 600; }
+  body.dark .late { color: var(--sm-red-300) !important; }
+  .line { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--ui-line); font-size: 13px; }
+  button.line { width: 100%; border-left: 0; border-right: 0; border-bottom: 0; background: none; color: inherit; font: 13px var(--sm-font-sans); text-align: left; cursor: pointer; }
+  .tick { width: 16px; height: 16px; border: 1.5px solid var(--sm-black-500); border-radius: 4px; flex: none; display: grid; place-items: center; font-size: 11px; color: var(--sm-paper); }
+  .tick.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .struck { text-decoration: line-through; color: var(--ui-sub); }
+  .ok { color: var(--sm-green-500); font-weight: 700; } .bad { color: var(--sm-red-700); font-weight: 700; }
+  .muted { color: var(--ui-sub); }
+
+  .next { position: absolute; left: 24px; bottom: 20px; display: flex; align-items: center; gap: 14px; background: var(--ui-bg); border: 2px solid var(--ui-edge); border-radius: 14px; box-shadow: 4px 4px 0 var(--ui-edge); padding: 10px 12px 10px 16px; max-width: 560px; z-index: 4; }
+  .next .k { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--grana); }
+  body.dark .next .k { color: var(--gold); }
+  .next .t { font-weight: 600; }
+  .next .s { font-size: 12px; color: var(--ui-sub); }
+  .hint { position: absolute; right: 24px; bottom: 24px; font-size: 12px; color: var(--ui-sub); background: var(--ui-bg); opacity: .85; padding: 4px 10px; border-radius: 999px; }
+</style>
+</head>
+<body class="ph-day">
+<div class="top">
+  <img id="logo" src="springmoney-logo-primary.svg" alt="Spring Money">
+  <h1>Camp Nou</h1>
+  <span class="meta" id="meta"></span>
+  <div class="sp"></div>
+  <div class="res"><span class="ic">✓</span><b id="prog-text"></b><div class="bar"><i id="prog-bar"></i></div></div>
+  <button class="res warn" id="warn" hidden title="Refresh now"></button>
+  <button class="res quiet" id="score" title="Scoreboard details"></button>
+  <div class="scorepanel" id="scorepanel" hidden></div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="map" id="map">
+    <svg id="svg" width="1060" height="660"></svg>
+    <div id="labels"></div>
+    <div class="pop" id="pop" hidden></div>
+  </div>
+  <div class="next" id="next"></div>
+  <div class="hint">Click the pitch, buildings, fans or the big screen for details</div>
+</div>
+
+<script src="helpers.js"></script>
+<script src="data.js"></script>
+<script>
+  // Isometric grid: x runs down-right, y runs down-left.
+  const W = 72, H = 36, OX = 490, OY = 40, GW = 18, GD = 16;
+  const iso = (x, y, lift = 0) => [OX + (x - y) * W / 2, OY + (x + y) * H / 2 - lift];
+  const pts = a => a.map(p => p.map(n => n.toFixed(1)).join(",")).join(" ");
+  const poly = (a, fill, extra = "") => `<polygon points="${pts(a)}" fill="${fill}" ${extra}/>`;
+  const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Same scatter every time, so the base doesn't reshuffle on each redraw.
+  function rng(seed) {
+    return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+
+  // ---------- Local state: tasks you add and things you mark done stay on this PC ----------
+
+  cleanData();
+  const store = {
+    get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+  };
+  // Items keep their source's own id (a Frappe lead name, say). A "done" mark is saved against the id
+  // plus the item's stamp (its follow-up date, message time...), so it survives a refresh but doesn't
+  // carry over to the next follow-up on the same lead.
+  ITEMS.forEach((it, i) => it.id = it.id || "s" + i);
+  const doneKey = it => it.id + "|" + (it.stamp || "");
+  const todayIso = new Date().toLocaleDateString("en-CA");   // YYYY-MM-DD in local time
+  const doneMap = store.get("cc-done", {});
+
+  // Your own tasks age like everything else: an open one from an earlier day shows as overdue,
+  // and ticked ones from earlier days are cleared away.
+  const added = store.get("cc-added", []).filter(a => {
+    a.stamp = a.stamp || todayIso;   // tasks saved before this change had no date
+    const days = Math.round((new Date(todayIso) - new Date(a.stamp)) / 86400000);
+    if (days > 0 && doneMap[doneKey(a)]) return false;
+    if (days > 0) Object.assign(a, { due: "overdue", late: days, when: `Added ${days} day${days > 1 ? "s" : ""} ago` });
+    return true;
+  });
+  store.set("cc-added", added);
+  added.forEach(a => ITEMS.push(a));
+  ITEMS.forEach(it => { if (doneMap[doneKey(it)]) it.done = true; });
+  // My list lives in a plain file on D: (data\my-list.md); the app saves every change there.
+  function saveList() {
+    fetch("/api/my-list", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(MY_LIST) });
+  }
+
+  // Today's track: everything due today or overdue, most important first (the order the app sends),
+  // up to the day size chosen in the nav. Tasks you add yourself always ride the track.
+  let daySize = getDaySize(), dueToday = 0;
+  function assignTrack() {
+    const cap = Math.min(dayCap(daySize), MAX_TRACK);
+    let placed = 0;
+    dueToday = 0;
+    ITEMS.forEach(i => {
+      const today = i.due === "overdue" || i.due === "today";
+      if (i.src === "local") { i.onTrack = true; return; }
+      dueToday += today;
+      i.onTrack = today && placed < cap ? (placed++, true) : false;
+    });
+  }
+
+  function setDone(id, done) {
+    const it = ITEMS.find(i => i.id === id);
+    it.done = done;
+    if (done) doneMap[doneKey(it)] = true; else delete doneMap[doneKey(it)];
+    store.set("cc-done", doneMap);
+  }
+
+  // A task you add goes on the track right after `afterId`, or at the end.
+  function addTask(title, area, afterId) {
+    const item = { id: "L" + Date.now(), stamp: todayIso, area, stage: "", src: "local", title: esc(title), sub: "Added by you", when: "Today", due: "today", done: false, onTrack: true };
+    const at = afterId ? ITEMS.findIndex(i => i.id === afterId) + 1 : ITEMS.length;
+    ITEMS.splice(at, 0, item);
+    store.set("cc-added", ITEMS.filter(i => i.src === "local"));
+    return item;
+  }
+
+  // ---------- Layout ----------
+
+  // The stadium sits in the middle. The pitch runs along x (long side), with the goal at the
+  // bottom-right end; stands wrap it: tall at the back, half-built (and low) at the front, like a
+  // colosseum you can see into.
+  const PITCH = { x0: 6, x1: 13, y0: 5.5, y1: 10.5 };
+  const CENTRE = [9.5, 8];
+  const STANDS = { x0: 4.4, x1: 14.8, y0: 3.9, y1: 12.1 };
+
+  // Landmarks around the stadium, one per work area (in AREAS order), plus a spare for "My tasks".
+  // None sits in front of the pitch, so nothing hides a task.
+  const BUILDING_SLOTS = [[14.6, .3], [10.9, .3], [.6, 4.6], [3.6, .3], [16, 5.2], [5.6, 13.6], [.6, 8.6]];
+  const STYLES = ["training", "office", "masia", "arena", "museum", "fanzone", "house"];
+  const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "Manager's house" };
+  const NOTICE_BOARD = [1.4, 12.4], WATCHTOWER = [17, 13.6];
+  const LAMPS = [[4, 3.4], [9.5, 3.4], [15.2, 3.4], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [4, 8]];
+  const TREES = [[1, 2.6], [2.6, 3], [7.4, 2.6], [8.6, .6], [13.6, 2.6], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [14.2, 14.6], [12, 14.8], [9.6, 15], [3.4, 14.6], [.6, 11.2], [2.8, 7.2], [3, 10.4], [17.6, 15]];
+
+  // How the base looks at each time of day.
+  const PHASES = {
+    morning: { tint: "#FFD9A8", op: .16, lit: false },
+    day:     { tint: null, op: 0, lit: false },
+    evening: { tint: "#F08A3C", op: .26, lit: true },
+    night:   { tint: "#0B1E3F", op: .62, lit: true },
+  };
+
+  let mode = getMode(), phase = "day", selected = null, lights = [], focusAdd = false;
+
+  // ---------- Drawing helpers ----------
+
+  function box(x, y, w, d, h, color, base = 0) {
+    const top = [iso(x, y, base + h), iso(x + w, y, base + h), iso(x + w, y + d, base + h), iso(x, y + d, base + h)];
+    const left = [iso(x, y + d, base), iso(x + w, y + d, base), iso(x + w, y + d, base + h), iso(x, y + d, base + h)];
+    const right = [iso(x + w, y, base), iso(x + w, y + d, base), iso(x + w, y + d, base + h), iso(x + w, y, base + h)];
+    return poly(left, color) + poly(left, "rgba(0,0,0,.06)") + poly(right, color) + poly(right, "rgba(0,0,0,.24)") +
+      poly(top, color) + poly(top, "rgba(255,255,255,.28)");
+  }
+  // Rectangles lying on a building's two visible walls.
+  const onLeft = (x0, x1, y, z0, z1) => [iso(x0, y, z0), iso(x1, y, z0), iso(x1, y, z1), iso(x0, y, z1)];
+  const onRight = (x, y0, y1, z0, z1) => [iso(x, y0, z0), iso(x, y1, z0), iso(x, y1, z1), iso(x, y0, z1)];
+
+  // Sheared frames that lie flat on a surface, so textures and signs follow it.
+  // shear: along the y axis (right wall, signs facing the viewer). shearL: along the x axis (left wall).
+  // shearTop: a flat roof, with 36 units per tile in both directions.
+  const shear = (x, y, lift) => { const [ox, oy] = iso(x, y, lift); return `matrix(1,-0.5,0,1,${ox},${oy})`; };
+  const shearL = (x, y, lift) => { const [ox, oy] = iso(x, y, lift); return `matrix(1,0.5,0,1,${ox},${oy})`; };
+  const shearTop = (x, y, lift) => { const [ox, oy] = iso(x, y, lift); return `matrix(1,0.5,-1,0.5,${ox},${oy})`; };
+
+  // Roof tiles on a slope: A-B is the eave, D sits above A and C above B on the ridge.
+  function tiles(A, B, C, D, rows, cols) {
+    let s = "";
+    for (let k = 1; k < rows; k++) {
+      const t = k / rows, P = lerp(A, D, t), Q = lerp(B, C, t);
+      s += `<line x1="${P[0].toFixed(1)}" y1="${P[1].toFixed(1)}" x2="${Q[0].toFixed(1)}" y2="${Q[1].toFixed(1)}" stroke="rgba(0,0,0,.2)" stroke-width=".8"/>`;
+    }
+    for (let k = 0; k < rows; k++) {
+      const t0 = k / rows, t1 = (k + 1) / rows, off = k % 2 ? .5 : 0;
+      for (let m = 1; m < cols; m++) {
+        const sm = (m - off) / cols;
+        if (sm <= 0) continue;
+        const P = lerp(lerp(A, B, sm), lerp(D, C, sm), t0), Q = lerp(lerp(A, B, sm), lerp(D, C, sm), t1);
+        s += `<line x1="${P[0].toFixed(1)}" y1="${P[1].toFixed(1)}" x2="${Q[0].toFixed(1)}" y2="${Q[1].toFixed(1)}" stroke="rgba(0,0,0,.13)" stroke-width=".6"/>`;
+      }
+    }
+    return s;
+  }
+
+  // Four-sided pointed roof with tiles. `between` is drawn after the back faces and before the front ones.
+  function pyramid(x, y, w, d, h, color, r = 26, between = "") {
+    const apex = iso(x + w / 2, y + d / 2, h + r);
+    const a = iso(x, y, h), b = iso(x + w, y, h), c = iso(x + w, y + d, h), dd = iso(x, y + d, h);
+    const rows = Math.max(3, Math.round(r / 5)), cols = Math.max(3, Math.round(w * 5));
+    return poly([a, dd, apex], color) + poly([a, dd, apex], "rgba(255,255,255,.18)") + poly([a, b, apex], color) + poly([a, b, apex], "rgba(255,255,255,.08)") +
+      between +
+      poly([dd, c, apex], color) + poly([dd, c, apex], "rgba(0,0,0,.1)") + tiles(dd, c, apex, apex, rows, cols) +
+      poly([b, c, apex], color) + poly([b, c, apex], "rgba(0,0,0,.32)") + tiles(c, b, apex, apex, rows, cols);
+  }
+
+  // Pitched roof with the ridge along x, tiled, with a decorated gable end on the right.
+  function gableX(x, y, w, d, h, color, r = 22) {
+    const A = iso(x, y + d, h), B = iso(x + w, y + d, h), C = iso(x + w, y + d / 2, h + r), D = iso(x, y + d / 2, h + r);
+    const bA = iso(x, y, h), bB = iso(x + w, y, h);
+    const end = [iso(x + w, y, h), iso(x + w, y + d, h), C];
+    const [ox, oy] = lerp(lerp(end[0], end[1], .5), C, .4);
+    return poly([bA, bB, C, D], color) + poly([bA, bB, C, D], "rgba(255,255,255,.15)") + tiles(bA, bB, C, D, 5, 10) +
+      poly([A, B, C, D], color) + poly([A, B, C, D], "rgba(0,0,0,.14)") + tiles(A, B, C, D, 5, 10) +
+      `<line x1="${D[0]}" y1="${D[1]}" x2="${C[0]}" y2="${C[1]}" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round"/>` +
+      poly(end, "#E6EBEA") + poly(end, "rgba(0,0,0,.18)") +
+      `<ellipse cx="${ox}" cy="${oy}" rx="4" ry="5" fill="#C4C9C8" stroke="rgba(0,0,0,.25)" stroke-width=".8"/>`;
+  }
+
+  // Upright cylinder; cy is the screen y of its base centre on the ground.
+  function cyl(cx, cy, rx, ry, h, color, base = 0) {
+    const b = cy - base, t = b - h;
+    const side = `M${cx - rx},${t} L${cx - rx},${b} A${rx},${ry} 0 0 0 ${cx + rx},${b} L${cx + rx},${t} Z`;
+    return `<path d="${side}" fill="${color}"/><path d="${side}" fill="url(#cylShade)"/>
+      <ellipse cx="${cx}" cy="${t}" rx="${rx}" ry="${ry}" fill="${color}"/><ellipse cx="${cx}" cy="${t}" rx="${rx}" ry="${ry}" fill="rgba(255,255,255,.25)"/>`;
+  }
+
+  // Onion dome sitting on (cx, by), scaled by k, with a gold finial.
+  function onion(cx, by, k, color) {
+    const d = `M${cx - 10 * k},${by} C${cx - 18 * k},${by - 10 * k} ${cx - 17 * k},${by - 24 * k} ${cx},${by - 34 * k} C${cx + 17 * k},${by - 24 * k} ${cx + 18 * k},${by - 10 * k} ${cx + 10 * k},${by} Z`;
+    return `<path d="${d}" fill="${color}"/><path d="${d}" fill="url(#domeShade)"/>
+      <line x1="${cx}" y1="${by - 34 * k}" x2="${cx}" y2="${by - 44 * k}" stroke="#B45309" stroke-width="${Math.max(1, 1.4 * k)}"/>
+      <circle cx="${cx}" cy="${by - 44 * k}" r="${Math.max(1.2, 1.8 * k)}" fill="#FDB022"/>`;
+  }
+
+  // Pointed arch, as used on the palace (in a wall's sheared frame).
+  const arch = (xc, w, yb, yt) => `M${xc - w / 2},${yb} V${yt + w * .55} Q${xc - w / 2},${yt + w * .12} ${xc},${yt} Q${xc + w / 2},${yt + w * .12} ${xc + w / 2},${yt + w * .55} V${yb} Z`;
+
+  const WALL = { office: "glass", bank: "stone", studio: "brick", house: "siding" };
+
+  // Wall material, a light band at each floor, and soft shading near the ground.
+  function walls(x, y, w, d, top, pat, bands = true) {
+    const h = top - 5, layer = (len) => {
+      let s = `<rect width="${len}" height="${h}" fill="url(#pt-${pat})"/>`;
+      if (bands) for (let z = 11; z < top - 8; z += 15) s += `<rect y="${top - z}" width="${len}" height="1.6" fill="rgba(255,255,255,.22)"/>`;
+      return s + `<rect width="${len}" height="${h}" fill="url(#ao)"/>`;
+    };
+    const c0 = iso(x + w, y + d, 5), c1 = iso(x + w, y + d, top);
+    return `<g transform="${shearL(x, y + d, top)}">${layer(w * W / 2)}</g><g transform="${shear(x + w, y + d, top)}">${layer(d * W / 2)}</g>
+      <line x1="${c0[0]}" y1="${c0[1]}" x2="${c1[0]}" y2="${c1[1]}" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>`;
+  }
+
+  function windows(x, y, w, d, h) {
+    const lit = PHASES[phase].lit, r = rng(Math.round(x * 31 + y * 17));
+    let s = "";
+    for (let z = 14; z + 9 < h - 4; z += 15) {
+      for (let i = .28; i < w - .15; i += .42) {
+        const on = lit && r() > .3;
+        const a = onLeft(x + i, x + i + .2, y + d, z, z + 9), b = onRight(x + w, y + i, y + i + .2, z, z + 9);
+        s += poly(a, on ? "#FDE68A" : "rgba(220,232,250,.85)", 'stroke="rgba(0,0,0,.25)" stroke-width=".6"');
+        s += poly(b, on ? "#F5D46A" : "rgba(190,205,225,.8)", 'stroke="rgba(0,0,0,.25)" stroke-width=".6"');
+        if (on) lights.push(poly(a, "#FDE68A", 'opacity=".9"'), poly(b, "#F5D46A", 'opacity=".85"'));
+      }
+    }
+    return s;
+  }
+
+  const door = (x, y, d) => poly(onLeft(x + .82, x + 1.18, y + d, 5, 21), "#272B2A") + poly(onLeft(x + .7, x + 1.3, y + d, 21, 24), "rgba(0,0,0,.35)") +
+    poly(onLeft(x + .75, x + 1.25, y + d + .12, 0, 5), "#E6EBEA");
+
+  // ---------- Buildings. Each returns its drawing and the height of its highest point, for the label. ----------
+
+  // ---------- Camp Nou landmarks ----------
+
+  const BLAU = "#004D98", GRANA = "#A50044", GOLD = "#EDBB00", TURF = "#3F9B52", TURF2 = "#4AA85C";
+  const shadowUnder = (x, y, w, d) => poly([iso(x - .2, y - .1), iso(x + w + .3, y - .1), iso(x + w + .3, y + d + .2), iso(x - .2, y + d + .2)], "rgba(0,0,0,.13)");
+
+  // Ciutat Esportiva: a training pitch with goals and a small clubhouse at the back.
+  function training(x, y, h) {
+    let s = shadowUnder(x, y, 2, 2) + poly([iso(x, y), iso(x + 2, y), iso(x + 2, y + 2), iso(x, y + 2)], TURF);
+    for (let i = 0; i < 4; i++) s += poly([iso(x + i * .5, y + .7), iso(x + i * .5 + .25, y + .7), iso(x + i * .5 + .25, y + 2), iso(x + i * .5, y + 2)], TURF2);
+    s += poly([iso(x + .1, y + .75), iso(x + 1.9, y + .75), iso(x + 1.9, y + 1.95), iso(x + .1, y + 1.95)], "none", 'stroke="#fff" stroke-width="1.2"');
+    s += `<line x1="${iso(x + 1, y + .75)[0]}" y1="${iso(x + 1, y + .75)[1]}" x2="${iso(x + 1, y + 1.95)[0]}" y2="${iso(x + 1, y + 1.95)[1]}" stroke="#fff" stroke-width="1"/>`;
+    [[x + .1, y + 1.35], [x + 1.9, y + 1.35]].forEach(([gx, gy]) => {
+      const a = iso(gx, gy - .2, 0), b = iso(gx, gy + .2, 0);
+      s += `<path d="M${a[0]},${a[1]} V${a[1] - 9} L${b[0]},${b[1] - 9} V${b[1]}" fill="none" stroke="#fff" stroke-width="1.4"/>`;
+    });
+    const hh = Math.max(20, h * .55);
+    s += box(x + .1, y + .05, 1.8, .55, hh, "#E6EBEA") + walls(x + .1, y + .05, 1.8, .55, hh, "glass") + windows(x + .1, y + .05, 1.8, .55, hh);
+    s += box(x + .06, y + .01, 1.88, .63, 3, BLAU, hh);
+    return { svg: s, peak: hh + 10 };
+  }
+
+  // La Masia: a stone Catalan farmhouse with a terracotta roof and a little tower.
+  function masia(x, y, h) {
+    const hh = Math.max(24, h * .7);
+    let s = shadowUnder(x, y, 2, 2) + box(x + .1, y + .2, 1.8, 1.6, hh, "#D9C7A3") + walls(x + .1, y + .2, 1.8, 1.6, hh + 5, "stone", false);
+    for (let i = .35; i < 1.7; i += .5) s += poly(onLeft(x + .1 + i, x + .1 + i + .18, y + 1.8, 10, hh - 6), "#5C4A33");
+    for (let i = .3; i < 1.4; i += .5) s += poly(onRight(x + 1.9, y + .2 + i, y + .2 + i + .18, 10, hh - 6), "#4A3B28");
+    s += poly(onLeft(x + .85, x + 1.15, y + 1.8, 0, 16), "#3A2E20");
+    s += gableX(x + .1, y + .2, 1.8, 1.6, hh, "#B45309", 18);
+    s += box(x + .25, y + .3, .45, .45, hh + 16, "#CDB993") + pyramid(x + .25, y + .3, .45, .45, hh + 16, "#B45309", 14);
+    return { svg: s, peak: hh + 34 };
+  }
+
+  // Palau: an oval arena in Blaugrana with a shallow dome.
+  function arena(x, y, h) {
+    const [cx, cy] = iso(x + 1, y + 1), rx = 46, ry = 23, hh = Math.max(24, h * .6);
+    let s = `<ellipse cx="${cx + 8}" cy="${cy + 3}" rx="${rx + 10}" ry="${ry + 5}" fill="rgba(0,0,0,.13)"/>` +
+      cyl(cx, cy, rx, ry, hh, BLAU);
+    const band = (z, t, color) => `<path d="M${cx - rx},${cy - z} A${rx},${ry} 0 0 0 ${cx + rx},${cy - z} L${cx + rx},${cy - z - t} A${rx},${ry} 0 0 1 ${cx - rx},${cy - z - t} Z" fill="${color}"/>`;
+    s += band(hh * .45, 6, GRANA) + band(hh - 4, 3, GOLD);
+    const t = cy - hh, dr = rx * .9;
+    const dome = `M${cx - dr},${t} A${dr},${rx * .3} 0 0 1 ${cx + dr},${t} A${dr},${ry * .9} 0 0 1 ${cx - dr},${t} Z`;
+    s += `<path d="${dome}" fill="#E6EBEA"/><path d="${dome}" fill="url(#domeShade)"/>`;
+    return { svg: s, peak: hh + rx * .3 + 6 };
+  }
+
+  // Museum and club shop: a glass front hung with Blaugrana banners.
+  function museum(x, y, h) {
+    const top = Math.max(28, h * .8) + 5;
+    let s = shadowUnder(x, y, 2, 2) + box(x - .08, y - .08, 2.16, 2.16, 5, "#C4C9C8") + box(x, y, 2, 2, top - 5, "#DCE3E8", 5) + walls(x, y, 2, 2, top, "glass");
+    s += `<g transform="${shearL(x + .12, y + 2, top - 4)}">${[0, 1, 2, 3, 4].map(i => `<rect x="${i * 13}" width="9" height="${top - 14}" fill="${i % 2 ? GRANA : BLAU}"/><rect x="${i * 13}" y="${top - 18}" width="9" height="4" fill="${GOLD}"/>`).join("")}</g>`;
+    s += door(x, y, 2) + box(x - .06, y - .06, 2.12, 2.12, 4, "#E6EBEA", top);
+    return { svg: s, peak: top + 8 };
+  }
+
+  // Fan zone: striped tents, a kiosk and a big flag.
+  function fanzone(x, y, h) {
+    let s = shadowUnder(x, y, 2, 2) + poly([iso(x, y), iso(x + 2, y), iso(x + 2, y + 2), iso(x, y + 2)], "#D5DAD8");
+    [[x + .1, y + .1, BLAU], [x + 1.1, y + .1, GRANA], [x + .1, y + 1.1, GRANA], [x + 1.1, y + 1.1, BLAU]].forEach(([tx, ty, c]) => {
+      s += box(tx, ty, .8, .8, 10, "#FCFFFE") + pyramid(tx, ty, .8, .8, 10, c, 18);
+    });
+    const [fx, fy] = iso(x + 1, y + 1, 0);
+    s += `<rect x="${fx - 1}" y="${fy - 62}" width="2.4" height="62" fill="#494D4C"/>
+      <rect x="${fx + 1.4}" y="${fy - 62}" width="26" height="7" fill="${BLAU}"/><rect x="${fx + 1.4}" y="${fy - 55}" width="26" height="7" fill="${GRANA}"/>`;
+    return { svg: s, peak: 66 };
+  }
+
+  function building(x, y, h, color, style) {
+    if (style === "training") return training(x, y, h);
+    if (style === "masia") return masia(x, y, h);
+    if (style === "arena") return arena(x, y, h);
+    if (style === "museum") return museum(x, y, h);
+    if (style === "fanzone") return fanzone(x, y, h);
+    if (style === "lab") return lab(x, y, h, color);
+    if (style === "palace") return palace(x, y, h);
+    const w = 2, d = 2;
+    let s = poly([iso(x - .2, y - .1), iso(x + w + .3, y - .1), iso(x + w + .3, y + d + .2), iso(x - .2, y + d + .2)], "rgba(0,0,0,.13)");
+    s += box(x - .08, y - .08, w + .16, d + .16, 5, "#C4C9C8");
+    s += box(x, y, w, d, h, color, 5);
+    let top = h + 5, peak;
+    s += walls(x, y, w, d, top, WALL[style]);
+    if (style === "bank") {
+      for (let i = .2; i < w - .1; i += .4) s += poly(onLeft(x + i, x + i + .14, y + d, 9, top - 6), "rgba(255,255,255,.6)");
+      for (let i = .2; i < d - .1; i += .4) s += poly(onRight(x + w, y + i, y + i + .14, 9, top - 6), "rgba(255,255,255,.4)");
+    } else {
+      s += windows(x, y, w, d, top);
+    }
+    if (style === "studio") {
+      // Striped awning over the ground floor.
+      s += `<g transform="${shearL(x + .15, y + d, 30)}">${Array.from({ length: 8 }, (_, i) => `<rect x="${i * 6.5}" width="6.5" height="7" fill="${i % 2 ? "#FCFFFE" : "#006E4A"}"/>`).join("")}<rect y="7" width="52" height="1.5" fill="rgba(0,0,0,.25)"/></g>`;
+    }
+    s += door(x, y, d);
+
+    if (style === "office" || style === "studio") {
+      // Flat roof: overhanging cornice, then a gravel deck.
+      s += box(x - .06, y - .06, w + .12, d + .12, 4, "#E6EBEA", top);
+      top += 4;
+      s += `<g transform="${shearTop(x + .08, y + .08, top)}"><rect width="${(w - .16) * 36}" height="${(d - .16) * 36}" fill="#A6ABAA"/><rect width="${(w - .16) * 36}" height="${(d - .16) * 36}" fill="url(#pt-gravel)"/></g>`;
+    }
+    if (style === "office") {
+      // Solar panels, an air-con unit, a water tank and an antenna.
+      s += `<g transform="${shearTop(x + .2, y + .2, top + 2)}">${[0, 1, 2].map(i => `<rect x="${i * 14}" y="0" width="12" height="30" fill="#272B2A" stroke="#6B9BEA" stroke-width=".6"/><path d="M${i * 14} 10H${i * 14 + 12}M${i * 14} 20H${i * 14 + 12}M${i * 14 + 6} 0V30" stroke="#6B9BEA" stroke-width=".4"/>`).join("")}</g>`;
+      s += box(x + 1.3, y + .25, .45, .4, 9, "#C4C9C8", top) + `<g>${cyl(...iso(x + 1.5, y + 1.45, 0), 9, 4.5, 12, "#E6EBEA", top)}</g>`;
+      const [ax, ay] = iso(x + 1.75, y + 1.75, top);
+      s += `<line x1="${ax}" y1="${ay}" x2="${ax}" y2="${ay - 26}" stroke="#272B2A" stroke-width="1.5"/><circle cx="${ax}" cy="${ay - 27}" r="2" fill="#B42318"/>`;
+      if (PHASES[phase].lit) lights.push(`<circle cx="${ax}" cy="${ay - 27}" r="6" fill="url(#bulb)"/>`);
+      peak = top + 30;
+    } else if (style === "studio") {
+      // Planters along the back, and a billboard facing the viewer.
+      for (let i = 0; i < 3; i++) s += box(x + .2 + i * .55, y + .2, .4, .25, 5, "#B45309", top) + box(x + .22 + i * .55, y + .22, .36, .21, 6, "#30AB84", top + 5);
+      s += `<g transform="${shear(x + 1, y + 1.9, top + 40)}"><rect x="10" y="30" width="3" height="12" fill="#272B2A"/><rect x="${d * 36 * .8 - 14}" y="30" width="3" height="12" fill="#272B2A"/>
+        <rect x="0" y="0" width="${d * 36 * .8}" height="30" rx="2" fill="#006E4A" stroke="#272B2A" stroke-width="1.5"/>
+        <text x="${d * 36 * .4}" y="19" text-anchor="middle" font-size="10" font-weight="700" fill="#FCFFFE" font-family="Inter">spring.money</text></g>`;
+      peak = top + 44;
+    } else if (style === "bank") {
+      s += box(x - .05, y - .05, w + .1, d + .1, 5, "#E6EBEA", top) + gableX(x, y, w, d, top + 5, "#C4C9C8", 18);
+      peak = top + 26;
+    } else {
+      // House: terracotta tiles with a chimney poking through the back slope.
+      const chimney = box(x + 1.25, y + .35, .28, .28, 30, "#686D6C", top) + box(x + 1.21, y + .31, .36, .36, 3, "#494D4C", top + 30);
+      s += pyramid(x, y, w, d, top, "#B45309", 24, chimney);
+      peak = top + 34;
+    }
+    return { svg: s, peak };
+  }
+
+  // Round glass lab with a ribbed dome.
+  function lab(x, y, h, color) {
+    const [cx, cy] = iso(x + 1, y + 1), rx = 46, ry = 23, lit = PHASES[phase].lit, r = rng(11);
+    let s = `<ellipse cx="${cx + 8}" cy="${cy + 3}" rx="${rx + 10}" ry="${ry + 5}" fill="rgba(0,0,0,.13)"/>` +
+      cyl(cx, cy, rx + 5, ry + 2.5, 5, "#C4C9C8") + cyl(cx, cy, rx, ry, h, color, 5);
+    for (let z = 12; z + 9 < h - 2; z += 15) {
+      const on = lit && r() > .25, b = cy - 5 - z, t = b - 9;
+      const band = `M${cx - rx},${b} A${rx},${ry} 0 0 0 ${cx + rx},${b} L${cx + rx},${t} A${rx},${ry} 0 0 1 ${cx - rx},${t} Z`;
+      s += `<path d="${band}" fill="${on ? "#FDE68A" : "rgba(205,226,244,.9)"}"/>`;
+      if (on) lights.push(`<path d="${band}" fill="#FDE68A" opacity=".85"/>`);
+      // Mullions follow the front curve of the band.
+      for (let a = -1.3; a <= 1.31; a += .325) {
+        const mx = cx + rx * Math.sin(a), my = b + ry * Math.cos(a);
+        s += `<line x1="${mx.toFixed(1)}" y1="${my.toFixed(1)}" x2="${mx.toFixed(1)}" y2="${(my - 9).toFixed(1)}" stroke="rgba(0,0,0,.25)" stroke-width=".7"/>`;
+      }
+      s += `<path d="M${cx - rx},${t} A${rx},${ry} 0 0 0 ${cx + rx},${t}" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1"/>`;
+    }
+    const top = cy - 5 - h;
+    s += cyl(cx, cy, rx + 2, ry + 1, 3, "#E6EBEA", 5 + h);
+    const t = top - 3, dr = rx * .82, dh = rx * .58;
+    const dome = `M${cx - dr},${t} A${dr},${dh} 0 0 1 ${cx + dr},${t} A${dr},${ry * .82} 0 0 1 ${cx - dr},${t} Z`;
+    s += `<path d="${dome}" fill="${lit ? "#F5E3A3" : "#B4D3EE"}"/><path d="${dome}" fill="url(#domeShade)"/>`;
+    for (let a = -1.2; a <= 1.21; a += .4) {
+      const bx = cx + dr * Math.sin(a), by = t + ry * .82 * Math.cos(a);
+      s += `<path d="M${bx.toFixed(1)},${by.toFixed(1)} Q${(cx + dr * Math.sin(a) * .85).toFixed(1)},${(t - dh * .75).toFixed(1)} ${cx},${(t - dh).toFixed(1)}" fill="none" stroke="rgba(39,43,42,.35)" stroke-width=".9"/>`;
+    }
+    s += `<line x1="${cx}" y1="${t - dh}" x2="${cx}" y2="${t - dh - 16}" stroke="#272B2A" stroke-width="1.5"/><circle cx="${cx}" cy="${t - dh - 17}" r="2.2" fill="#30AB84"/>`;
+    s += poly([iso(x + .82, y + 2.02, 5), iso(x + 1.18, y + 2.02, 5), iso(x + 1.18, y + 2.02, 0), iso(x + .82, y + 2.02, 0)], "#E6EBEA");
+    return { svg: s, peak: 5 + h + 3 + dh + 18 };
+  }
+
+  // Marble palace on a raised platform: arched iwans, a big onion dome, four chhatris and four minarets.
+  function palace(x, y, h) {
+    const marble = "#F3F8F7", lit = PHASES[phase].lit;
+    const bh = 30 + Math.max(0, h - 26) * .6, base = 9, top = base + bh;
+    let s = poly([iso(x - .5, y - .4), iso(x + 2.7, y - .4), iso(x + 2.7, y + 2.6), iso(x - .5, y + 2.6)], "rgba(0,0,0,.12)");
+    s += box(x - .35, y - .35, 2.7, 2.7, base, "#E6EBEA") + walls(x - .35, y - .35, 2.7, 2.7, base, "stone", false);
+
+    const minaret = (mx, my) => {
+      const [cx, cy] = iso(mx, my, base);
+      let m = cyl(cx, cy, 5.5, 2.8, 62, marble);
+      [20, 40].forEach(z => m += `<ellipse cx="${cx}" cy="${cy - z}" rx="7.5" ry="3.6" fill="#E6EBEA" stroke="rgba(0,0,0,.18)" stroke-width=".6"/>`);
+      return m + onion(cx, cy - 62, .42, marble);
+    };
+    const chhatri = (mx, my) => {
+      const [cx, cy] = iso(mx, my, top + 3);
+      let c = "";
+      [-4, 4].forEach(dx => c += `<rect x="${cx + dx - 1}" y="${cy - 10}" width="2" height="10" fill="#E6EBEA"/>`);
+      return c + `<ellipse cx="${cx}" cy="${cy - 10}" rx="7" ry="3.2" fill="#E6EBEA"/>` + onion(cx, cy - 10, .4, marble);
+    };
+
+    s += minaret(x - .2, y - .2) + minaret(x + 2.2, y - .2) + minaret(x - .2, y + 2.2);
+
+    // Main block, with a tall arched iwan in the middle of each visible wall and smaller arches either side.
+    s += box(x + .25, y + .25, 1.5, 1.5, bh, marble, base) + walls(x + .25, y + .25, 1.5, 1.5, top, "marble", false);
+    const len = 1.5 * W / 2;
+    const face = (frame) => {
+      let f = `<g transform="${frame}"><rect x="${len / 2 - 15}" y="3" width="30" height="${bh - 3}" fill="none" stroke="#C4C9C8" stroke-width="1.2"/>
+        <path d="${arch(len / 2, 22, bh, 8)}" fill="#C9D2D0"/><path d="${arch(len / 2, 14, bh, 16)}" fill="${lit ? "#FDE68A" : "#8E9A97"}"/>`;
+      [7, len - 7].forEach(cx => f += `<path d="${arch(cx, 8, bh * .48, bh * .2)}" fill="#A6B1AE"/><path d="${arch(cx, 8, bh - 2, bh * .6)}" fill="#A6B1AE"/>`);
+      return f + "</g>";
+    };
+    s += face(shearL(x + .25, y + 1.75, top)) + face(shear(x + 1.75, y + 1.75, top));
+    if (lit) {
+      lights.push(`<g transform="${shearL(x + .25, y + 1.75, top)}"><path d="${arch(len / 2, 14, bh, 16)}" fill="#FDE68A" opacity=".9"/></g>`,
+        `<g transform="${shear(x + 1.75, y + 1.75, top)}"><path d="${arch(len / 2, 14, bh, 16)}" fill="#F5D46A" opacity=".85"/></g>`);
+    }
+    s += box(x + .2, y + .2, 1.6, 1.6, 3, "#E6EBEA", top);
+
+    s += chhatri(x + .45, y + .45) + chhatri(x + 1.55, y + .45) + chhatri(x + .45, y + 1.55);
+    const [dx, dy] = iso(x + 1, y + 1, top + 3);
+    s += cyl(dx, dy, 18, 9, 10, marble) + onion(dx, dy - 10, 1.25, marble);
+    s += chhatri(x + 1.55, y + 1.55) + minaret(x + 2.2, y + 2.2);
+    return { svg: s, peak: top + 3 + 10 + 56 };
+  }
+
+  // ---------- Scenery ----------
+
+  function tree(x, y, big) {
+    const [cx, cy] = iso(x + .5, y + .5), k = big ? 1.2 : 1;
+    return `<ellipse cx="${cx + 6}" cy="${cy + 1}" rx="${15 * k}" ry="${6 * k}" fill="rgba(0,0,0,.14)"/>
+      <rect x="${cx - 2.5}" y="${cy - 12}" width="5" height="12" fill="#494D4C"/>
+      <polygon points="${cx - 15 * k},${cy - 10} ${cx + 15 * k},${cy - 10} ${cx},${cy - 34 * k}" fill="#30AB84"/>
+      <polygon points="${cx},${cy - 10} ${cx + 15 * k},${cy - 10} ${cx},${cy - 34 * k}" fill="#108E66"/>
+      <polygon points="${cx - 12 * k},${cy - 24 * k} ${cx + 12 * k},${cy - 24 * k} ${cx},${cy - 48 * k}" fill="#54BA99"/>
+      <polygon points="${cx},${cy - 24 * k} ${cx + 12 * k},${cy - 24 * k} ${cx},${cy - 48 * k}" fill="#149B72"/>`;
+  }
+
+  function lamp(x, y) {
+    const [cx, cy] = iso(x, y);
+    if (PHASES[phase].lit) lights.push(`<ellipse cx="${cx}" cy="${cy}" rx="26" ry="12" fill="url(#pool)"/><circle cx="${cx}" cy="${cy - 30}" r="16" fill="url(#bulb)"/>`);
+    return `<rect x="${cx - 1.2}" y="${cy - 30}" width="2.4" height="30" fill="#272B2A"/>
+      <rect x="${cx - 4}" y="${cy - 35}" width="8" height="6" rx="2" fill="${PHASES[phase].lit ? "#FDE68A" : "#E6EBEA"}" stroke="#272B2A" stroke-width="1"/>`;
+  }
+
+  function person(shirt, skin) {
+    return `<ellipse cx="0" cy="0" rx="5" ry="2" fill="rgba(0,0,0,.2)"/>
+      <rect x="-3" y="-8" width="2.6" height="8" rx="1" fill="#272B2A"/><rect x=".4" y="-8" width="2.6" height="8" rx="1" fill="#272B2A"/>
+      <rect x="-4.2" y="-17" width="8.4" height="10" rx="3" fill="${shirt}"/>
+      <circle cx="0" cy="-20.5" r="3.8" fill="${skin}"/><path d="M-3.8,-21 a3.8,3.8 0 0 1 7.6,0 z" fill="#272B2A"/>`;
+  }
+
+  // Fans in Blaugrana strolling the concourse and between the landmarks.
+  const WALKERS = [
+    { shirt: BLAU, skin: "#C68642", dur: 34, route: [[5.2, 3.3], [14.2, 3.3], [5.2, 3.3]] },
+    { shirt: GRANA, skin: "#8D5524", dur: 28, route: [[3.8, 4.6], [3.8, 11.6], [3.8, 4.6]] },
+    { shirt: GOLD, skin: "#E0AC69", dur: 24, route: [[15.4, 4.4], [15.4, 11.4], [15.4, 4.4]] },
+    { shirt: GRANA, skin: "#C68642", dur: 18, route: [[2.7, 6.9], [3.6, 7.6], [2.7, 8.4], [2.7, 6.9]] },
+    { shirt: BLAU, skin: "#8D5524", dur: 22, route: [[6.8, 13.3], [9.5, 12.9], [12.2, 13.3], [9.5, 12.9], [6.8, 13.3]] },
+    { shirt: GRANA, skin: "#E0AC69", dur: 30, route: [[11.9, 2.6], [14.4, 2.9], [11.9, 2.6]] },
+  ];
+
+  function walkers() {
+    return WALKERS.map((p, n) => {
+      const list = p.route.map(([x, y]) => iso(x, y));
+      const d = "M" + list.map(q => q.map(v => v.toFixed(1)).join(" ")).join(" L");
+      const motion = still ? "" : `<animateMotion dur="${p.dur}s" begin="-${n * 3}s" repeatCount="indefinite" path="${d}"/>`;
+      const [sx, sy] = still ? list[0] : [0, 0];
+      return `<g transform="translate(${sx},${sy})"><g>${motion}${person(p.shirt, p.skin)}</g></g>`;
+    }).join("");
+  }
+
+  // A small protest outside any building with overdue work: more overdue items, bigger crowd.
+  function protest(x, y, overdue, seed) {
+    const r = rng(seed), n = Math.min(4 + overdue * 2, 9);
+    const shirts = [GRANA, BLAU, GRANA, BLAU, GOLD, "#272B2A"];
+    const skins = ["#8D5524", "#C68642", "#E0AC69"];
+    const signs = ["!", "LATE", "!!", overdue + " DUE"];
+    const crowd = Array.from({ length: n }, (_, i) => ({ x: x + .15 + r() * 1.7, y: y + .3 + r() * .7, i }))
+      .sort((a, b) => (a.x + a.y) - (b.x + b.y));
+    return crowd.map(p => {
+      const [cx, cy] = iso(p.x, p.y);
+      const sign = p.i % 2 === 0 ? `<line x1="4" y1="-12" x2="4" y2="-31" stroke="#494D4C" stroke-width="1.2"/>
+        <rect x="-5" y="-41" width="18" height="11" rx="1" fill="#FCFFFE" stroke="#272B2A" stroke-width=".8"/>
+        <text x="4" y="-32.6" text-anchor="middle" font-size="${signs[p.i % 4].length > 2 ? 5.5 : 8}" font-weight="700" fill="#B42318" font-family="Inter">${signs[p.i % 4]}</text>` : "";
+      return `<g transform="translate(${cx.toFixed(1)},${cy.toFixed(1)})"><g class="bob" style="animation-delay:-${(r() * 1.2).toFixed(2)}s">
+        ${person(shirts[p.i % shirts.length], skins[p.i % 3])}${sign}</g></g>`;
+    }).join("");
+  }
+
+  function noticeBoard(x, y) {
+    const len = 2.2, h = 70, base = 22, W1 = len * W / 2, H1 = h - base;
+    const [gx, gy] = iso(x, y + len / 2);
+    const notes = ["#FEF3C7", "#DCE8FA", "#E0F3ED"];
+    let s = `<ellipse cx="${gx + 8}" cy="${gy}" rx="${W1 / 1.6}" ry="7" fill="rgba(0,0,0,.14)"/>
+      <g transform="${shear(x, y + len, h)}">
+        <rect x="6" y="0" width="5" height="${h}" fill="#494D4C"/><rect x="${W1 - 11}" y="0" width="5" height="${h}" fill="#494D4C"/>
+        <rect x="0" y="-4" width="${W1}" height="${H1 + 4}" rx="3" fill="#B45309" stroke="#272B2A" stroke-width="1.5"/>
+        <rect x="3" y="-1" width="${W1 - 6}" height="${H1 - 2}" rx="2" fill="#E8D3B5"/>
+        <text x="${W1 / 2}" y="9" text-anchor="middle" font-size="8" font-weight="700" fill="#5C3A0E" font-family="Inter" letter-spacing=".08em">MY LIST</text>`;
+    const shown = MY_LIST.slice(-3), nw = (W1 - 16) / 3;
+    shown.forEach((t, i) => {
+      const nx = 6 + i * (nw + 2), ny = 13, nh = H1 - 18;
+      s += `<g transform="rotate(${[-3, 2, -1][i]} ${nx + nw / 2} ${ny})">
+        <rect x="${nx}" y="${ny}" width="${nw}" height="${nh}" fill="${notes[i]}" stroke="rgba(0,0,0,.15)"/>
+        <circle cx="${nx + nw / 2}" cy="${ny + 2}" r="1.8" fill="#B42318"/>
+        ${[8, 14, 20].map((ly, k) => `<rect x="${nx + 4}" y="${ny + ly}" width="${nw - 8 - k * 4}" height="2" rx="1" fill="${t.done ? "#C4C9C8" : "#686D6C"}"/>`).join("")}
+        ${t.done ? `<text x="${nx + nw / 2}" y="${ny + nh - 3}" text-anchor="middle" font-size="10" font-weight="700" fill="#006E4A">✓</text>` : ""}
+      </g>`;
+    });
+    return s + "</g>";
+  }
+
+  // ---------- The stadium ----------
+
+  const SEAT_TIERS = [{ depth: .4, h: 14 }, { depth: .5, h: 30 }, { depth: .5, h: 48 }];   // nearest the pitch first
+  const CONCRETE = "#C9CED2";
+
+  // Seat rows in Blaugrana with a sprinkling of fans, drawn flat on a stand's pitch-facing wall.
+  const seatFace = (frame, width, height) => `<g transform="${frame}"><rect width="${width}" height="${height}" fill="url(#pt-seats)"/>
+    <rect width="${width}" height="${height}" fill="url(#pt-crowd)"/><rect width="${width}" height="2" fill="rgba(255,255,255,.5)"/></g>`;
+
+  // The two back stands rise in three tiers; their walls face the pitch, so the view stays open.
+  function backStands(objects) {
+    // Back-right stand: runs along x on the far side (small y).
+    let y = PITCH.y0 - .2, below = 0;
+    SEAT_TIERS.forEach((t, i) => {
+      y -= t.depth;
+      const x0 = 5.6 - i * .4, x1 = 13.6 + i * .4;
+      objects.push({ z: x0 + y - 1, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below) });
+      below = t.h;
+    });
+    // Back-left stand: runs along y on the near-left side (small x).
+    let x = PITCH.x0 - .2; below = 0;
+    SEAT_TIERS.forEach((t, i) => {
+      x -= t.depth;
+      const y0 = 5.1 - i * .4, y1 = 10.9 + i * .4;
+      objects.push({ z: x + y0 - 1, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below) });
+      below = t.h;
+    });
+    // The tall back corner that joins them.
+    objects.push({ z: 8, svg: box(STANDS.x0, STANDS.y0, 1.2, 1.2, 48, CONCRETE) + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 48, "stone", false) });
+  }
+
+  // The front two stands are half-built: a low finished section, then bare frames and a crane,
+  // so you can see into the stadium as if it were a colosseum.
+  function frontStands(objects) {
+    const y = PITCH.y1 + .3, x = PITCH.x1 + .7;
+    // Front-left: finished seats from the corner flag to halfway, then scaffolding.
+    objects.push({ z: 6 + y + 1, svg: box(6, y, 3.6, .6, 12, CONCRETE) + `<g transform="${shearTop(6, y, 12)}"><rect width="${3.6 * 36}" height="${.6 * 36}" fill="url(#pt-seats)"/></g>` +
+      `<g transform="${shearL(6, y + .6, 12)}">${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${6 + i * 16},12 v-7 a3,3 0 0 1 6,0 v7" fill="rgba(0,0,0,.18)"/>`).join("")}</g>` });
+    objects.push({ z: 11 + y + 1, svg: scaffold(9.8, y, 3.6, .6, 26, "x") });
+    // Front-right: finished from the far end to halfway, then scaffolding up to the corner.
+    objects.push({ z: x + 5.5 + 1, svg: box(x, 5.4, .6, 2.8, 12, CONCRETE) + `<g transform="${shearTop(x, 5.4, 12)}"><rect width="${.6 * 36}" height="${2.8 * 36}" fill="url(#pt-seats)"/></g>` });
+    objects.push({ z: x + 9.5 + 1, svg: scaffold(x, 8.4, .6, 2.6, 26, "y") });
+    // The crane stands behind the back-right corner so its mast never crosses the pitch on screen.
+    objects.push({ z: 15.8 + 2.9, svg: crane(15.8, 2.9) });
+  }
+
+  // Bare frames of the stand still being built.
+  function scaffold(x, y, w, d, h, along) {
+    let s = poly([iso(x, y), iso(x + w, y), iso(x + w, y + d), iso(x, y + d)], "#B8BEC2");
+    const len = along === "x" ? w : d, posts = Math.round(len / .45);
+    for (let i = 0; i <= posts; i++) {
+      const f = i / posts;
+      [0, 1].forEach(side => {
+        const [px, py] = along === "x" ? [x + w * f, y + d * side] : [x + w * side, y + d * f];
+        const a = iso(px, py), b = iso(px, py, h);
+        s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#7D8180" stroke-width="1.4"/>`;
+      });
+    }
+    [h * .5, h].forEach(z => [0, 1].forEach(side => {
+      const [a, b] = along === "x" ? [iso(x, y + d * side, z), iso(x + w, y + d * side, z)] : [iso(x + w * side, y, z), iso(x + w * side, y + d, z)];
+      s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#7D8180" stroke-width="1.4"/>`;
+    }));
+    return s;
+  }
+
+  // A tower crane at the front corner, jib swinging over the unfinished stands.
+  function crane(x, y) {
+    const [bx, by] = iso(x, y), top = by - 150;
+    return `<rect x="${bx - 3}" y="${top}" width="6" height="150" fill="${GOLD}"/>
+      ${Array.from({ length: 12 }, (_, i) => `<path d="M${bx - 3},${top + i * 12.5} L${bx + 3},${top + (i + 1) * 12.5}" stroke="#B45309" stroke-width=".8"/>`).join("")}
+      <rect x="${bx - 120}" y="${top - 6}" width="160" height="6" fill="${GOLD}"/><rect x="${bx + 24}" y="${top - 4}" width="16" height="14" fill="#494D4C"/>
+      <rect x="${bx - 8}" y="${top - 14}" width="16" height="10" fill="#494D4C"/>
+      <line x1="${bx - 100}" y1="${top}" x2="${bx - 100}" y2="${top + 50}" stroke="#272B2A" stroke-width="1"/><rect x="${bx - 106}" y="${top + 50}" width="12" height="8" fill="#686D6C"/>`;
+  }
+
+  // Floodlight masts at the four corners; at dusk and night they light the pitch.
+  // The front-right mast sits further out than the others so it never crosses the pitch on screen.
+  const FLOODLIGHTS = [[4, 3.5], [14.8, 3.2], [4, 12.5], [16.8, 10.8]];
+  function floodlight(x, y) {
+    const [bx, by] = iso(x, y), top = by - 128, lit = PHASES[phase].lit;
+    if (lit) lights.push(`<circle cx="${bx}" cy="${top}" r="34" fill="url(#bulb)"/>`);
+    return `<rect x="${bx - 2}" y="${top}" width="4" height="128" fill="#686D6C"/>
+      <rect x="${bx - 16}" y="${top - 12}" width="32" height="14" rx="2" fill="#272B2A"/>
+      ${[0, 1, 2, 3].map(i => `<circle cx="${bx - 11 + i * 7.3}" cy="${top - 5}" r="2.6" fill="${lit ? "#FFF4C2" : "#C4C9C8"}"/>`).join("")}`;
+  }
+
+  // The big screen above the back stand doubles as the scoreboard.
+  function bigScreen() {
+    const x = 8, y = PITCH.y0 - 1.6, w = 3.4 * W / 2, z = 48 + 44;
+    const score = SCORE ? `${SCORE.clients} PAYING · ${SCORE.mrr || "—"} MRR${SCORE.mrrUnconfirmed ? " (CHECK)" : ""}` : "SCOREBOARD NOT CONNECTED";
+    const [a, b] = [iso(x + .4, y + .1, 48), iso(x + 3, y + .1, 48)];
+    return `<g class="clickable" data-kind="screen">
+      <line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 8}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 8}" stroke="#494D4C" stroke-width="3"/>
+      <g transform="${shearL(x, y + .1, z)}">
+        <rect width="${w}" height="40" rx="2" fill="#0A0D0C" stroke="#272B2A" stroke-width="2"/>
+        <rect x="3" y="3" width="${w - 6}" height="9" fill="${BLAU}"/><rect x="3" y="3" width="${(w - 6) / 2}" height="9" fill="${GRANA}"/>
+        <text x="${w / 2}" y="10" text-anchor="middle" font-size="6.5" font-weight="700" fill="#FCFFFE" font-family="Inter" letter-spacing=".12em">CAMP NOU</text>
+        <text x="${w / 2}" y="27" text-anchor="middle" font-size="${score.length > 28 ? 7 : 8.5}" font-weight="700" fill="${GOLD}" font-family="Inter">${score}</text>
+        <text x="${w / 2}" y="36" text-anchor="middle" font-size="5.5" fill="#A6ABAA" font-family="Inter">checked ${SCORE && SCORE.checked ? SCORE.checked : "—"}</text>
+      </g></g>`;
+  }
+
+  // The pitch: mown stripes, white lines, both goal boxes and the centre circle.
+  function pitch() {
+    const { x0, x1, y0, y1 } = PITCH, L = x1 - x0;
+    const line = (pts, extra = "") => `<polyline points="${pts.map(p => iso(...p).map(v => v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.4" ${extra}/>`;
+    let s = poly([iso(x0 - .25, y0 - .25), iso(x1 + .25, y0 - .25), iso(x1 + .25, y1 + .25), iso(x0 - .25, y1 + .25)], "#2F8445");
+    for (let i = 0; i < 14; i++) s += poly([iso(x0 + i * L / 14, y0), iso(x0 + (i + 1) * L / 14, y0), iso(x0 + (i + 1) * L / 14, y1), iso(x0 + i * L / 14, y1)], i % 2 ? TURF : TURF2);
+    s += line([[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]) + line([[CENTRE[0], y0], [CENTRE[0], y1]]);
+    s += line(Array.from({ length: 33 }, (_, i) => { const t = i / 32 * Math.PI * 2; return [CENTRE[0] + .85 * Math.cos(t), CENTRE[1] + .85 * Math.sin(t)]; }));
+    [[x0, 1], [x1, -1]].forEach(([gx, dir]) => {
+      s += line([[gx, 6.4], [gx + dir * 1.1, 6.4], [gx + dir * 1.1, 9.6], [gx, 9.6]]) + line([[gx, 7.2], [gx + dir * .45, 7.2], [gx + dir * .45, 8.8], [gx, 8.8]]);
+    });
+    return s;
+  }
+
+  // Goal frame with a net, at either end. The far (own) goal is drawn with the ground.
+  function goal(x, dir) {
+    const p0 = iso(x, 7.45), p1 = iso(x, 8.55), b0 = iso(x + dir * .45, 7.45), b1 = iso(x + dir * .45, 8.55), h = 16;
+    return `<polygon points="${p0[0]},${p0[1] - h} ${p1[0]},${p1[1] - h} ${b1[0]},${b1[1] - h * .6} ${b1[0]},${b1[1]} ${b0[0]},${b0[1]} ${b0[0]},${b0[1] - h * .6}" fill="url(#pt-net)" stroke="rgba(255,255,255,.5)" stroke-width=".6"/>
+      <path d="M${p0[0]},${p0[1]} V${p0[1] - h} L${p1[0]},${p1[1] - h} V${p1[1]}" fill="none" stroke="#FCFFFE" stroke-width="2.6"/>`;
+  }
+
+  // A football: the current task's marker.
+  function ball(cx, cy) {
+    return `<ellipse cx="${cx}" cy="${cy}" rx="8" ry="3.5" fill="rgba(0,0,0,.25)"/>
+      <g class="ball"><circle cx="${cx}" cy="${cy - 11}" r="7" fill="#FCFFFE" stroke="#272B2A" stroke-width="1"/>
+      <polygon points="${cx},${cy - 14} ${cx + 2.8},${cy - 12} ${cx + 1.8},${cy - 8.8} ${cx - 1.8},${cy - 8.8} ${cx - 2.8},${cy - 12}" fill="#272B2A"/></g>`;
+  }
+
+  // Countryside around the stadium, wide enough to run past the edges of the window.
+  const EDGE = 16;
+  const inBase = (x, y, pad) => x > -pad && x < GW + pad && y > -pad && y < GD + pad;
+  const onRoad = (x, y) => Math.abs(x - 9.5) < 1.1 && y > 13;
+
+  function ground() {
+    const r = rng(7), E = EDGE;
+    let s = poly([iso(-E, -E), iso(GW + E, -E), iso(GW + E, GD + E), iso(-E, GD + E)], "#B9DCC6");
+    for (let i = 0; i < 90; i++) {
+      const [px, py] = iso(-E + r() * (GW + 2 * E), -E + r() * (GD + 2 * E));
+      s += `<ellipse cx="${px}" cy="${py}" rx="${30 + r() * 70}" ry="${12 + r() * 28}" fill="${r() > .5 ? "#AFD5BD" : "#C4E2CF"}" opacity=".8"/>`;
+    }
+    for (let i = 0; i < 420; i++) {
+      const x = -E + r() * (GW + 2 * E), y = -E + r() * (GD + 2 * E);
+      if (onRoad(x, y) || (x > 3 && x < 16 && y > 2.6 && y < 13.4)) continue;
+      const [gx, gy] = iso(x, y);
+      s += `<path d="M${gx - 3},${gy} l1.5,-4 M${gx},${gy} l0,-5 M${gx + 3},${gy} l-1.5,-4" stroke="#7CC29F" stroke-width="1.2" stroke-linecap="round"/>`;
+    }
+    // The paved concourse round the stadium, and the avenue up to the main gate.
+    s += poly([iso(3.2, 2.8), iso(15.8, 2.8), iso(15.8, 13.2), iso(3.2, 13.2)], "#D9DDDB") +
+      `<g transform="${shearTop(3.2, 2.8, 0)}"><rect width="${12.6 * 36}" height="${10.4 * 36}" fill="url(#pt-paving)"/></g>`;
+    s += poly([iso(9, 13.2), iso(10, 13.2), iso(10, GD + E), iso(9, GD + E)], "#D9DDDB");
+    s += pitch() + goal(PITCH.x0, -1);
+    return s;
+  }
+
+  // Forest and rocks outside the base, clustered rather than evenly sprinkled.
+  function countryside(objects) {
+    const r = rng(99), E = EDGE;
+    for (let i = 0; i < 520; i++) {
+      const x = -E + r() * (GW + 2 * E), y = -E + r() * (GD + 2 * E);
+      if (inBase(x, y, 1.4) || onRoad(x, y)) continue;
+      const dense = Math.sin(x * .55) + Math.cos(y * .5) + Math.sin((x + y) * .3);
+      if (dense < .5 && r() > .2) continue;
+      objects.push({ z: x + y + 1, svg: tree(x, y, r() > .6) });
+    }
+    for (let i = 0; i < 40; i++) {
+      const x = -E + r() * (GW + 2 * E), y = -E + r() * (GD + 2 * E);
+      if (inBase(x, y, 1) || onRoad(x, y)) continue;
+      const [cx, cy] = iso(x, y), k = .6 + r();
+      objects.push({ z: x + y, svg: `<polygon points="${cx - 9 * k},${cy} ${cx - 5 * k},${cy - 7 * k} ${cx + 4 * k},${cy - 8 * k} ${cx + 9 * k},${cy}" fill="#A6ABAA"/><polygon points="${cx},${cy - 8 * k} ${cx + 4 * k},${cy - 8 * k} ${cx + 9 * k},${cy} ${cx + 2 * k},${cy}" fill="#7D8180"/>` });
+    }
+  }
+
+  // ---------- The day ----------
+
+  // The day is a match. Kick-off is the centre spot; tasks spiral outward across the whole pitch
+  // like a pass map, and the last pass goes into the goal at the bottom-right end. A light day
+  // spaces them a tile apart near kick-off; a heavy day packs them along the whole spiral.
+  const MAX_TRACK = 60;
+  const GOAL = [PITCH.x1 + .25, CENTRE[1]];
+  const SPIRAL = (() => {
+    const A = 3.0, B = 2.05, turns = 3, n = 720, pts = [], len = [0];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, th = t * turns * 2 * Math.PI;
+      pts.push([CENTRE[0] + A * t * Math.cos(th), CENTRE[1] + B * t * Math.sin(th)]);
+      if (i) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    }
+    return { pts, len, total: len[n] };
+  })();
+  function spiralAt(d) {
+    const { pts, len } = SPIRAL;
+    let i = 1;
+    while (i < len.length - 1 && len[i] < d) i++;
+    const f = (d - len[i - 1]) / ((len[i] - len[i - 1]) || 1);
+    return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+  }
+  // Positions are returned as tile corners (centre minus half a tile), like the rest of the drawing code.
+  function trackLayout(steps) {
+    const tasks = steps.length - 2, gap = Math.min(1, SPIRAL.total / (tasks + .5)), jit = rng(42);
+    const centres = steps.map((s, n) => {
+      if (n === 0) return CENTRE;
+      if (n === steps.length - 1) return GOAL;
+      const [x, y] = spiralAt(n * gap);
+      return [x + (jit() - .5) * .12 * gap, y + (jit() - .5) * .12 * gap];
+    });
+    return { gap, centres, at: n => [centres[n][0] - .5, centres[n][1] - .5] };
+  }
+
+  function daySteps() {
+    // Only the top items ride the track; the rest wait in their buildings.
+    const track = ITEMS.filter(i => i.onTrack !== false);
+    const open = track.filter(i => !i.done), done = track.filter(i => i.done);
+    return [{ cap: "Start", id: "start", when: "09:00" }, ...done, ...open, { cap: "Finish", id: "finish", when: "17:00 review" }];
+  }
+
+  function render() {
+    lights = [];
+    const steps = daySteps(), cur = steps.findIndex(s => !s.cap && !s.done);
+    const groups = groupItems(mode);
+    let path = "", objects = [], labels = "";
+
+    // The match: a chalk pass line from kick-off through every task to the goal, with a disc per task.
+    const lay = trackLayout(steps);
+    const rad = Math.min(.34, lay.gap * .4), k = rad / .34;   // disc radius in tiles; text scales with it
+    const disc = ([x, y], rad, lift = 0) => { const [cx, cy] = iso(x, y, lift); return [cx, cy, rad * W / Math.SQRT2, rad * H / Math.SQRT2]; };
+    path += `<polyline points="${lay.centres.map(c => iso(...c).map(v => v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-dasharray="4 4"/>`;
+    steps.forEach((s, n) => {
+      const c = lay.centres[n], isSel = selected && selected.kind === "step" && selected.id === s.id;
+      if (s.id === "start") {
+        const [cx, cy, rx, ry] = disc(c, .16);
+        path += `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="start"><ellipse cx="${cx}" cy="${cy}" rx="${rx + 6}" ry="${ry + 3}" fill="rgba(255,255,255,.25)"/><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#FCFFFE"/></g>`;
+        // Label the kick-off at the far end of the halfway line, clear of the passes around the centre.
+        const [kx, ky] = iso(CENTRE[0], PITCH.y0 - .75, 16);
+        labels += `<div class="label small" style="left:${kx}px;top:${ky}px">Kick-off · ${s.when}</div>`;
+        return;
+      }
+      if (s.id === "finish") {
+        const [cx, cy] = iso(...c);
+        objects.push({ z: c[0] + c[1] + .2, svg: `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="finish">${goal(PITCH.x1, 1)}</g>` });
+        labels += `<div class="label small" style="left:${cx + 70}px;top:${cy + 4}px">Full time · ${s.when}</div>`;
+        return;
+      }
+      const [cx, cy, rx, ry] = disc(c, rad, 2);
+      const color = s.src === "local" ? "#0A7E57" : AREAS[s.area].color;
+      const ring = s.done ? "" : s.due === "overdue" ? `<ellipse cx="${cx}" cy="${cy}" rx="${rx + 2.5}" ry="${ry + 1.5}" fill="none" stroke="#F97066" stroke-width="2"/>` : "";
+      path += `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="${s.id}" ${s.done ? 'opacity=".55"' : ""}>
+        <ellipse cx="${cx}" cy="${cy + 2}" rx="${rx}" ry="${ry}" fill="rgba(0,0,0,.25)"/>
+        <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${s.done ? "#FCFFFE" : color}" stroke="#FCFFFE" stroke-width="1.2"/>${ring}
+        <text x="${cx}" y="${cy + 3.4 * k}" text-anchor="middle" font-size="${Math.max(7, 10 * k)}" font-weight="700" fill="${s.done ? "#0A7E57" : "#FCFFFE"}" font-family="Inter">${s.done ? "✓" : n}</text></g>`;
+      if (n === cur) {
+        path += `<ellipse class="glow" cx="${cx}" cy="${cy}" rx="${rx + 5}" ry="${ry + 3}" fill="none" stroke="${GOLD}" stroke-width="3"/>`;
+        objects.push({ z: c[0] + c[1] + .1, svg: ball(cx + rx * .7, cy - ry * .2) });
+      }
+    });
+
+    // The stadium around the pitch. The floodlight glow is laid on the grass, under the passes and stands.
+    let pitchLight = "";
+    backStands(objects);
+    frontStands(objects);
+    objects.push({ z: 7.9, svg: bigScreen() });
+    FLOODLIGHTS.forEach(([x, y]) => objects.push({ z: x + y + .5, svg: floodlight(x, y) }));
+    // Under the floodlights the pitch glows like a match night: beams from every mast, and a bright
+    // wash over the grass (blended so the passes stay readable, just brighter).
+    if (PHASES[phase].lit) {
+      const { x0, x1, y0, y1 } = PITCH, [px, py] = iso(...CENTRE);
+      const beams = FLOODLIGHTS.map(([x, y]) => {
+        const [bx, by] = iso(x, y), top = by - 128, [tx, ty] = iso(x < CENTRE[0] ? x0 + 1.5 : x1 - 1.5, y < CENTRE[1] ? y0 + 1.2 : y1 - 1.2);
+        return `<polygon points="${bx - 14},${top} ${bx + 14},${top} ${tx + 90},${ty} ${tx - 90},${ty}" fill="url(#beam)"/>`;
+      }).join("");
+      pitchLight = (`<g style="mix-blend-mode:screen">${beams}
+        <ellipse cx="${px}" cy="${py}" rx="300" ry="150" fill="url(#pitchGlow)"/>
+        ${poly([iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)], phase === "night" ? "rgba(90,140,80,.28)" : "rgba(255,240,200,.14)")}</g>`);
+    }
+
+    // One building per group. More open work makes a taller building.
+    groups.slice(0, BUILDING_SLOTS.length).forEach((g, n) => {
+      const [x, y] = BUILDING_SLOTS[n];
+      const openCount = g.items.filter(i => !i.done).length;
+      const h = 26 + Math.min(openCount, 8) * 10;
+      const isSel = selected && selected.kind === "group" && selected.key === g.key;
+      const b = building(x, y, h, g.color, STYLES[n]);
+      objects.push({ z: x + y + 4, svg: `<g class="clickable ${isSel ? "sel" : ""}" data-kind="group" data-key="${g.key}">${b.svg}</g>` });
+      const overdue = g.items.filter(i => i.due === "overdue" && !i.done).length;
+      if (overdue) objects.push({ z: x + y + 4.5, svg: `<g class="clickable ${selected && selected.kind === "protest" && selected.key === g.key ? "sel" : ""}" data-kind="protest" data-key="${g.key}">${protest(x, y + 2, overdue, n + 1)}</g>` });
+      const [lx, ly] = iso(x + 1, y + 1, b.peak + 10);
+      // In the Area view each building is a club landmark, with its work area underneath.
+      const name = mode === "area" ? `<span>${LANDMARKS[STYLES[n]]}<span class="sub">${g.label}</span></span>` : g.label;
+      labels += `<div class="label" style="left:${lx}px;top:${ly}px">${name}<span class="n" style="background:${openCount ? g.color : "#A6ABAA"}">${openCount}</span></div>`;
+    });
+
+    // Notice board (my list) and watchtower (last night's runs).
+    const nb = NOTICE_BOARD, wt = WATCHTOWER;
+    objects.push({ z: nb[0] + nb[1] + 2, svg: `<g class="clickable ${selected && selected.kind === "list" ? "sel" : ""}" data-kind="list">${noticeBoard(nb[0], nb[1])}</g>` });
+    const failed = RUNS.filter(r => !r.ok).length;
+    objects.push({ z: wt[0] + wt[1] + 1, svg: `<g class="clickable ${selected && selected.kind === "runs" ? "sel" : ""}" data-kind="runs">
+      ${box(wt[0], wt[1], 1, 1, 14, "#686D6C") + walls(wt[0], wt[1], 1, 1, 14, "stone", false)}${box(wt[0] + .2, wt[1] + .2, .6, .6, 56, "#A6ABAA", 14) + walls(wt[0] + .2, wt[1] + .2, .6, .6, 70, "stone", false)}
+      ${box(wt[0] + .05, wt[1] + .05, .9, .9, 8, "#494D4C", 70)}${pyramid(wt[0] + .05, wt[1] + .05, .9, .9, 78, failed ? "#B42318" : "#006E4A", 22)}</g>` });
+    const [nx, ny] = iso(nb[0], nb[1] + 1.1, 84);
+    const [wx, wy] = iso(wt[0] + .5, wt[1] + .5, 114);
+    labels += `<div class="label small" style="left:${nx}px;top:${ny}px">My list<span class="n" style="background:#B45309">${MY_LIST.filter(t => !t.done).length}</span></div>`;
+    labels += `<div class="label small" style="left:${wx}px;top:${wy}px">Night watch${failed ? `<span class="n" style="background:#B42318">${failed} !</span>` : ""}</div>`;
+    if (PHASES[phase].lit) { const [bx, by] = iso(wt[0] + .5, wt[1] + .5, 74); lights.push(`<circle cx="${bx}" cy="${by}" r="18" fill="url(#bulb)"/>`); }
+
+    TREES.forEach(([x, y], i) => objects.push({ z: x + y + 1, svg: tree(x, y, i % 3 === 0) }));
+    LAMPS.forEach(([x, y]) => objects.push({ z: x + y, svg: lamp(x, y) }));
+    countryside(objects);
+    objects.sort((a, b) => a.z - b.z);
+
+    // Time of day: a colour filter over the whole base, then the lights on top so they glow through it.
+    const ph = PHASES[phase];
+    const [r, g, b] = ph.tint ? [1, 3, 5].map(i => 1 - ph.op * (1 - parseInt(ph.tint.slice(i, i + 2), 16) / 255)) : [1, 1, 1];
+    const defs = `<defs>
+      <filter id="tod" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="${r} 0 0 0 0  0 ${g} 0 0 0  0 0 ${b} 0 0  0 0 0 1 0"/></filter>
+      <radialGradient id="bulb"><stop offset="0" stop-color="#FFF4C2" stop-opacity=".95"/><stop offset=".35" stop-color="#FDE68A" stop-opacity=".55"/><stop offset="1" stop-color="#FDE68A" stop-opacity="0"/></radialGradient>
+      <radialGradient id="pool"><stop offset="0" stop-color="#FDE68A" stop-opacity=".55"/><stop offset="1" stop-color="#FDE68A" stop-opacity="0"/></radialGradient>
+      <radialGradient id="domeShade" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></radialGradient>
+      <linearGradient id="cylShade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
+      <linearGradient id="ao" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
+      <pattern id="pt-brick" width="12" height="7" patternUnits="userSpaceOnUse"><path d="M0 .3H12M0 3.8H12M6 .3V3.8M0 3.8V7M12 3.8V7" stroke="rgba(0,0,0,.16)" stroke-width=".7" fill="none"/></pattern>
+      <pattern id="pt-stone" width="20" height="10" patternUnits="userSpaceOnUse"><rect width="20" height="10" fill="rgba(255,255,255,.08)"/><path d="M0 .4H20M0 5.4H20M10 .4V5.4M0 5.4V10M20 5.4V10" stroke="rgba(0,0,0,.13)" stroke-width=".8" fill="none"/></pattern>
+      <pattern id="pt-marble" width="24" height="12" patternUnits="userSpaceOnUse"><path d="M0 .4H24M12 .4V12" stroke="rgba(0,0,0,.06)" stroke-width=".6"/><path d="M3 9Q8 6 14 8" stroke="rgba(120,130,128,.15)" fill="none" stroke-width=".6"/></pattern>
+      <pattern id="pt-glass" width="9" height="15" patternUnits="userSpaceOnUse"><rect width="9" height="15" fill="rgba(180,215,240,.14)"/><path d="M.4 0V15M0 .4H9" stroke="rgba(255,255,255,.3)" stroke-width=".8"/><path d="M1 14L8 2" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/></pattern>
+      <pattern id="pt-siding" width="10" height="4" patternUnits="userSpaceOnUse"><path d="M0 3.6H10" stroke="rgba(0,0,0,.14)" stroke-width=".8"/><path d="M0 .4H10" stroke="rgba(255,255,255,.12)" stroke-width=".6"/></pattern>
+      <radialGradient id="pitchGlow"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".5"/><stop offset=".6" stop-color="#FFF6D8" stop-opacity=".18"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></radialGradient>
+      <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4C2" stop-opacity=".55"/><stop offset="1" stop-color="#FFF4C2" stop-opacity="0"/></linearGradient>
+      <pattern id="pt-seats" width="10" height="6" patternUnits="userSpaceOnUse"><rect width="10" height="3" fill="${BLAU}"/><rect y="3" width="10" height="3" fill="${GRANA}"/><path d="M0 2.6H10M0 5.6H10" stroke="rgba(0,0,0,.25)" stroke-width=".6"/></pattern>
+      <pattern id="pt-crowd" width="17" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#FCFFFE" opacity=".8"/><circle cx="7.5" cy="5" r="1.2" fill="${GOLD}" opacity=".85"/><circle cx="12" cy="1.6" r="1.2" fill="#E0AC69" opacity=".9"/><circle cx="15" cy="6.4" r="1.3" fill="#FCFFFE" opacity=".6"/><circle cx="4.5" cy="7" r="1.2" fill="#8D5524" opacity=".85"/></pattern>
+      <pattern id="pt-net" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0L4 4M4 0L0 4" stroke="rgba(255,255,255,.55)" stroke-width=".5"/></pattern>
+      <pattern id="pt-paving" width="18" height="18" patternUnits="userSpaceOnUse"><path d="M0 .5H18M.5 0V18" stroke="rgba(0,0,0,.07)" stroke-width="1"/></pattern>
+      <pattern id="pt-gravel" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".8" fill="rgba(0,0,0,.18)"/><circle cx="4.5" cy="4" r=".7" fill="rgba(255,255,255,.3)"/><circle cx="4" cy="1" r=".5" fill="rgba(0,0,0,.12)"/></pattern></defs>`;
+
+    const tod = ph.tint ? 'filter="url(#tod)"' : "";
+    document.getElementById("svg").innerHTML = defs + `<g ${tod}>${ground()}</g><g pointer-events="none">${pitchLight}</g>` +
+      `<g ${tod}>` + path + walkers() + objects.map(o => o.svg).join("") + `</g><g pointer-events="none">${lights.join("")}</g>`;
+    document.getElementById("labels").innerHTML = labels;
+
+    const p = progress();
+    document.getElementById("prog-text").textContent = p.total ? `${p.done} / ${p.total} done` : "No tasks yet";
+    document.getElementById("prog-bar").style.width = p.pct + "%";
+    renderHeader();
+
+    const c = steps[cur];
+    document.getElementById("next").innerHTML = !ITEMS.length
+      ? `<div><div class="k">No data yet</div><div class="t">Nothing is connected yet, so the track is empty.</div><div class="s">Frappe, Slack and the rest get connected next. You can still add your own tasks from any building.</div></div>`
+      : c ? `<div style="flex:1;min-width:0"><div class="k">Your move · pass ${cur}</div>
+      <div class="t">${c.title}</div><div class="s"><span class="${c.due === "overdue" ? "late" : ""}">${c.when}</span> · ${c.sub}</div></div>
+      ${c.src === "local" ? `<button class="go" data-act="done" data-id="${c.id}">Mark done ✓</button>` : `<a class="go" href="${c.url || "#"}" target="_blank">${goLabel(c)} →</a>`}`
+      : `<div><div class="k">All clear</div><div class="t">Every square done. Time for the evening review.</div></div>`;
+
+    renderPop(steps);
+  }
+
+  // Today's date, when the data was last refreshed, and the scoreboard (or that it isn't connected).
+  function renderHeader() {
+    const today = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+    document.getElementById("meta").textContent = `${today} · refreshed ${hhmm(META.refreshedAt)}`;
+    // Anything out of date or failing gets named up front, with the time its data is from.
+    const off = META.sources.filter(s => s.status === "stale" || s.status === "error");
+    const warn = document.getElementById("warn");
+    warn.hidden = !off.length;
+    if (off.length) {
+      const say = s => s.status === "error" ? `${s.label}: problem` : `${s.label} from ${hhmm(s.refreshedAt)}`;
+      warn.textContent = off.length === 1 ? `⚠ ${say(off[0])}` : `⚠ ${off.length} sources out of date`;
+      warn.title = off.map(s => s.status === "error" ? `${s.label}: ${s.note || "couldn't be read"}` : `${s.label}: data from ${hhmm(s.refreshedAt)}`).join("\n") + "\n\nClick to refresh now.";
+    }
+    const chk = '<span class="check">CHECK</span>';
+    document.getElementById("score").innerHTML = SCORE
+      ? `<span class="ic">₹</span><b>${SCORE.clients}</b> paying${SCORE.clientsUnconfirmed ? " " + chk : ""} · <b>${SCORE.mrr || "—"}</b> MRR${SCORE.mrrUnconfirmed ? " " + chk : ""} · checked ${SCORE.checked || "—"}`
+      : `<span class="ic">₹</span>Scoreboard not connected`;
+    document.getElementById("scorepanel").innerHTML = SCORE ? `<h3>Clients and revenue</h3>
+      <div class="muted" style="font-size:12px">As written in clients-and-revenue.md · last checked ${SCORE.checked || "—"}</div>
+      <div class="big"><div><b>${SCORE.clients}</b><span>paying, confirmed${SCORE.clientsUnconfirmed ? " " + chk : ""}</span></div>
+        <div><b>${SCORE.mrr || "—"}</b><span>MRR ${SCORE.mrrNote}${SCORE.mrrUnconfirmed ? " " + chk : ""}</span></div></div>
+      ${SCORE.groups.map(g => `<div class="row"><span class="n">${g.count}</span><div><b>${g.status}</b>${g.unconfirmed ? ` ${chk} <span class="muted" style="font-size:11px">${g.unconfirmed} unconfirmed</span>` : ""}<div class="names">${g.names.join(", ")}</div></div></div>`).join("")}
+      <div class="src">CHECK means the file marks it as not confirmed yet. Source: ${SCORE.file}</div>`
+      : `<h3>Scoreboard not connected</h3><div class="muted">clients-and-revenue.md wasn't found on the H: drive.</div>`;
+  }
+
+  function goLabel(i) {
+    return { frappe: "Open lead", gmail: "Open draft", slack: "Open in Slack", calendar: "Open event", drive: "Open file", sheet: "Open sheet" }[i.src];
+  }
+
+  // Items on the track jump to their square; the rest open straight in their app.
+  const itemRow = (i) => {
+    const inner = `<span class="chip ${i.src === "local" ? "mine" : ""}">${chip(i, mode)}</span><span class="m">${i.title}</span><span class="w ${i.due === "overdue" ? "late" : ""}">${i.when}</span>`;
+    return i.onTrack === false
+      ? `<a class="it ${i.done ? "done" : ""}" href="${i.url || "#"}" target="_blank" style="text-decoration:none">${inner}</a>`
+      : `<button class="it ${i.done ? "done" : ""}" data-goto="${i.id}">${inner}</button>`;
+  };
+  const backlogRow = (key) => {
+    const n = mode === "area" && BACKLOG.counts[key];
+    return n ? `<a class="it" href="${BACKLOG.url}" target="_blank" style="text-decoration:none"><span class="chip">BACKLOG</span><span class="m">${n} more overdue by over ${BACKLOG.days} days</span><span class="w">Open in Frappe →</span></a>` : "";
+  };
+  const addBox = (placeholder, target) => `<form class="add" data-add="${target}"><input name="t" placeholder="${placeholder}" autocomplete="off"><button class="btn2">Add</button></form>`;
+
+  // Detail pop-up for whatever is selected, placed beside it.
+  function renderPop(steps) {
+    const pop = document.getElementById("pop");
+    if (!selected) { pop.hidden = true; return; }
+    let head, body, color, anchor;
+    const p = progress();
+    if (selected.kind === "step" && selected.id === "start") {
+      const [x, y] = trackLayout(steps).at(0);
+      color = BLAU; anchor = iso(x + .5, y + .5);
+      head = `<div><div class="k">Kick-off · 09:00</div><h3>Morning brief</h3></div>`;
+      const digest = RUNS.find(r => r.name === "BD digest");
+      body = `<dl class="facts"><dt>Digest</dt><dd>${digest ? digest.note : "No digest report yet"}</dd><dt>Today</dt><dd>${p.total - p.done} squares to clear, ${ITEMS.filter(i => i.due === "overdue" && !i.done).length} overdue</dd></dl>
+        ${digest && digest.url ? `<div class="actions"><a class="go" href="${digest.url}" target="_blank">Open digest in Slack →</a></div>` : ""}`;
+    } else if (selected.kind === "step" && selected.id === "finish") {
+      const n = steps.findIndex(s => s.id === "finish"), [x, y] = trackLayout(steps).at(n);
+      color = GRANA; anchor = iso(x + .5, y + .5);
+      head = `<div><div class="k">Full time · 17:00</div><h3>Evening review</h3></div>`;
+      const waiting = dueToday - (steps.length - 2 - ITEMS.filter(i => i.src === "local").length);
+      body = `<dl class="facts"><dt>Block</dt><dd>Your usual review, 17:00–19:00</dd><dt>So far</dt><dd>${p.done} of ${p.total} done (${p.pct}%)</dd><dt>Wrap</dt><dd>Your end-of-day wrap usually arrives 16:55 in Slack</dd>
+        ${waiting > 0 ? `<dt>Also due</dt><dd>${waiting} more due today wait in their buildings (today's track is set to ${daySize}).</dd>` : ""}</dl>
+        <div class="actions"><a class="go" href="https://calendar.google.com/calendar/r/day" target="_blank">Open calendar →</a></div>`;
+    } else if (selected.kind === "step") {
+      const n = steps.findIndex(s => s.id === selected.id), s = steps[n];
+      if (!s) { selected = null; pop.hidden = true; return; }
+      const [x, y] = trackLayout(steps).at(n);
+      color = s.src === "local" ? "#0A7E57" : AREAS[s.area].color; anchor = iso(x + .5, y + .5);
+      head = `<div><div class="k">Pass ${n} of ${steps.length - 2}</div><h3>${s.title}</h3></div>`;
+      body = `<dl class="facts"><dt>What</dt><dd>${s.sub}</dd><dt>When</dt><dd class="${s.due === "overdue" ? "late" : ""}">${s.when}</dd>
+        <dt>Area</dt><dd>${AREAS[s.area].label}${s.stage ? " · " + s.stage : ""}</dd><dt>From</dt><dd>${SOURCES[s.src].from}</dd></dl>
+        <div class="actions">${s.src !== "local" ? `<a class="go" href="${s.url || "#"}" target="_blank">${goLabel(s)} →</a>` : ""}
+          <button class="btn2" data-act="${s.done ? "undo" : "done"}" data-id="${s.id}">${s.done ? "Undo" : "Mark done ✓"}</button></div>
+        ${s.src !== "local" ? `<div class="note">Marks it done here only. ${SOURCES[s.src].from} stays as it is.</div>` : ""}
+        ${addBox("Add a follow-up task…", "after:" + s.id)}`;
+    } else if (selected.kind === "group" || selected.kind === "protest") {
+      const g = groupItems(mode).find(g => g.key === selected.key), n = Object.keys(GROUPINGS[mode]).indexOf(selected.key);
+      const [x, y] = BUILDING_SLOTS[n];
+      color = g.color; anchor = iso(x + 1, y + 1, 40);
+      if (selected.kind === "protest") {
+        const late = g.items.filter(i => i.due === "overdue" && !i.done);
+        head = `<div><div class="k">Protest at ${g.label}</div><h3>${late.length} overdue</h3></div>`;
+        body = `<div class="from">Clear these and the crowd goes home.</div>` + late.map(itemRow).join("");
+      } else {
+        head = `<div><div class="k">${mode === "area" ? LANDMARKS[STYLES[n]] : { source: "Channel", urgency: "Due" }[mode]}</div><h3>${g.label}</h3></div>`;
+        body = `<div class="from">${g.from || g.items.length + " items"}</div>` + (g.items.length ? g.items.map(itemRow).join("") : '<div class="muted">Nothing here. All clear.</div>') +
+          backlogRow(g.key) + addBox(`Add a task to ${g.label}…`, "group:" + g.key);
+      }
+    } else if (selected.kind === "list") {
+      color = "#B45309"; anchor = iso(NOTICE_BOARD[0], NOTICE_BOARD[1] + 1.1, 40);
+      head = `<div><div class="k">Notice board</div><h3>My list</h3></div>`;
+      body = MY_LIST.map((t, i) => `<button class="line" data-tick="${i}"><span class="tick ${t.done ? "on" : ""}">${t.done ? "✓" : ""}</span><span class="${t.done ? "struck" : ""}">${esc(t.text)}</span></button>`).join("") +
+        addBox("Add to my list…", "list");
+    } else {
+      color = "#494D4C"; anchor = iso(WATCHTOWER[0] + .5, WATCHTOWER[1] + .5, 60);
+      head = `<div><div class="k">Night watch</div><h3>Scheduled runs</h3></div>`;
+      body = RUNS.length
+        ? RUNS.map(r => `<div class="line"><span class="${r.ok ? "ok" : "bad"}">${r.ok ? "✓" : "!"}</span><b>${r.name}</b><span class="muted" style="flex:1">${r.note}</span>${r.url ? `<a href="${r.url}" target="_blank" class="muted">Open →</a>` : ""}</div>`).join("")
+        : '<div class="muted">No run reports yet. Once the scheduled jobs write their summaries, they show up here.</div>';
+    }
+    pop.innerHTML = `<header style="background:${color}">${head}<button class="x" data-close>×</button></header><div class="body">${body}</div>`;
+    pop.hidden = false;
+    // Open to the right of the object, or to the left when near the right edge.
+    const left = anchor[0] > 700 ? anchor[0] - 370 : anchor[0] + 30;
+    const top = Math.max(10, Math.min(anchor[1] - 120, 660 - pop.offsetHeight - 10));
+    pop.style.left = left + "px"; pop.style.top = top + "px";
+    if (focusAdd) { const inp = pop.querySelector(".add input"); inp && inp.focus(); focusAdd = false; }
+  }
+
+  // ---------- Interaction ----------
+
+  function act(el) {
+    const a = el.closest("[data-act]");
+    // Ids are stored escaped (see cleanData) and the browser un-escapes attributes, so escape again to match.
+    if (a) { setDone(esc(a.dataset.id), a.dataset.act === "done"); render(); return true; }
+    const go = el.closest("[data-goto]");
+    if (go) { selected = { kind: "step", id: esc(go.dataset.goto) }; render(); return true; }
+    const tk = el.closest("[data-tick]");
+    if (tk) { const t = MY_LIST[+tk.dataset.tick]; t.done = !t.done; saveList(); render(); return true; }
+    return false;
+  }
+
+  document.getElementById("pop").addEventListener("submit", e => {
+    e.preventDefault();
+    const form = e.target, text = form.t.value.trim();
+    if (!text) return;
+    // "after:<id>" or "group:<key>"; ids can contain colons (Slack ids do), so split at the first one only.
+    const target = form.dataset.add, cut = target.indexOf(":");
+    const kind = cut < 0 ? target : target.slice(0, cut), key = cut < 0 ? "" : esc(target.slice(cut + 1));
+    if (kind === "list") {
+      MY_LIST.push({ text, done: false }); saveList();
+    } else if (kind === "after") {
+      const src = ITEMS.find(i => i.id === key);
+      addTask(text, src.area, key);
+    } else {
+      addTask(text, mode === "area" ? key : "other");
+    }
+    focusAdd = true;
+    render();
+  });
+
+  document.getElementById("map").addEventListener("click", e => {
+    if (e.target.closest("[data-close]")) { selected = null; render(); return; }
+    if (e.target.closest("#pop")) { act(e.target); return; }
+    const t = e.target.closest("[data-kind]");
+    if (!t) { selected = null; render(); return; }
+    const k = t.dataset.kind;
+    // The big screen is the scoreboard: open the same details as the corner chip.
+    if (k === "screen") { e.stopPropagation(); document.getElementById("scorepanel").hidden = false; return; }
+    selected = k === "step" ? { kind: k, id: esc(t.dataset.id) } : (k === "group" || k === "protest") ? { kind: k, key: t.dataset.key } : { kind: k };
+    render();
+  });
+  document.getElementById("next").addEventListener("click", e => act(e.target));
+
+  document.getElementById("warn").addEventListener("click", () => window.parent.postMessage({ refresh: true }, "*"));
+
+  // Scoreboard details open under the corner chip and close on any click elsewhere.
+  document.addEventListener("click", e => {
+    const panel = document.getElementById("scorepanel");
+    if (e.target.closest("#score")) panel.hidden = !panel.hidden;
+    else if (!e.target.closest("#scorepanel")) panel.hidden = true;
+  });
+
+  // Fit the base into whatever space the window gives it.
+  function fit() {
+    const st = document.getElementById("stage").getBoundingClientRect();
+    // The stadium and its landmarks are wider than The Base, so fit a wider area.
+    const s = Math.min(st.width / 1180, (st.height - 20) / 660, 1.3);
+    document.getElementById("map").style.transform = `translate(-50%, -50%) scale(${s})`;
+  }
+  window.addEventListener("resize", fit);
+
+  function setScene(p, dark) {
+    phase = PHASES[p] ? p : "day";
+    document.body.className = "ph-" + phase + (dark ? " dark" : "");
+    document.getElementById("logo").src = dark ? "springmoney-logo-reversed.svg" : "springmoney-logo-primary.svg";
+    render();
+  }
+
+  onGroupChange(m => { mode = m; selected = null; render(); });
+  onDaySize(d => { if (d !== daySize) { daySize = d; selected = null; assignTrack(); render(); } });
+  assignTrack();
+  onScene(setScene);
+  setScene("day", false); fit();
+</script>
+</body>
+</html>
