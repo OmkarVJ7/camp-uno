@@ -71,6 +71,7 @@
   .map { position: absolute; left: 50%; top: 50%; width: 1060px; height: 660px; transform-origin: center; }
   .map svg { position: absolute; inset: 0; overflow: visible; }
   .clickable { cursor: pointer; }
+  .disc { transform: scale(var(--disc-scale, 1)); }
   .clickable:hover { filter: brightness(1.06); }
   .sel { filter: drop-shadow(0 0 4px #EDBB00) drop-shadow(0 0 8px #EDBB00); }
   @keyframes kick { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
@@ -167,8 +168,8 @@
   <div class="next" id="next"></div>
   <div class="hint">Click the pitch, buildings, fans or the big screen for details. Drag to move when zoomed in.</div>
   <div class="ctrls" id="ctrls">
-    <button data-c="out" title="Zoom out" aria-label="Zoom out">−</button>
-    <button data-c="in" title="Zoom in" aria-label="Zoom in">+</button>
+    <button data-c="out" title="Zoom out (or Ctrl + scroll)" aria-label="Zoom out">−</button>
+    <button data-c="in" title="Zoom in (or Ctrl + scroll)" aria-label="Zoom in">+</button>
     <button data-c="fit" title="Fit to screen" aria-label="Fit to screen"><svg viewBox="0 0 16 16" width="14" height="14"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button>
     <span class="sep"></span>
     <button data-c="labels" title="Show or hide names (numbers stay)" aria-label="Show or hide names"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h7l5 5-5 5H2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="5.2" cy="8" r="1.3" fill="currentColor"/></svg></button>
@@ -264,7 +265,13 @@
   // colosseum you can see into.
   const PITCH = { x0: 6, x1: 13, y0: 5.5, y1: 10.5 };
   const CENTRE = [9.5, 8];
-  const STANDS = { x0: 4.4, x1: 14.8, y0: 3.9, y1: 12.1 };
+  // A walkway between the pitch and the stands, so the crowd never crowds the passes.
+  const STAND_GAP = .6, STAND_DEPTH = 1.4;
+  const STANDS = { x0: PITCH.x0 - STAND_GAP - STAND_DEPTH, y0: PITCH.y0 - STAND_GAP - STAND_DEPTH };
+  // The back stands are drawn after everything behind them (offices, Palau, lamps) and before the pitch-side boards.
+  const STAND_Z = 15;
+  // Squad training ground, kept free for the agents (players) who join later.
+  const TRAINING_GROUND = [11.2, 13.6, 4.2, 1.8];
 
   // Landmarks around the stadium, one per work area (in AREAS order), plus a spare for "My tasks".
   // None sits in front of the pitch, so nothing hides a task.
@@ -275,8 +282,8 @@
   const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "Manager's house" };
   const NOTICE_BOARD = [1.4, 12.4], WATCHTOWER = [17, 13.6];
   // Nothing stands between you and the big screen (above the back stand, x 8 to 11.4).
-  const LAMPS = [[4, 3.4], [6.2, 3.3], [12.9, 3.3], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [4, 8]];
-  const TREES = [[1, 2.4], [2.6, 2.8], [16, 1.4], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [14.2, 14.6], [12, 14.8], [9.6, 15], [3.4, 14.6], [.6, 12], [2.9, 6], [2.9, 9.2], [17.6, 15]];
+  const LAMPS = [[3.3, 4.6], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [3.3, 8]];
+  const TREES = [[1, 2.4], [16, 1.4], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [9.6, 15.2], [3.4, 14.6], [.6, 12], [2.6, 6], [2.6, 9.2], [17.6, 15]];
 
   // How the base looks at each time of day.
   const PHASES = {
@@ -387,14 +394,14 @@
   function windows(x, y, w, d, h) {
     const lit = PHASES[phase].lit, r = rng(Math.round(x * 31 + y * 17));
     let s = "";
+    // Each wall gets its own row of windows: the left wall spans the width, the right wall the depth.
+    const pane = (q, on, dayFill, nightFill) => {
+      s += poly(q, on ? nightFill : dayFill, 'stroke="rgba(0,0,0,.25)" stroke-width=".6"');
+      if (on) lights.push(poly(q, nightFill, 'opacity=".9"'));
+    };
     for (let z = 14; z + 9 < h - 4; z += 15) {
-      for (let i = .28; i < w - .15; i += .42) {
-        const on = lit && r() > .3;
-        const a = onLeft(x + i, x + i + .2, y + d, z, z + 9), b = onRight(x + w, y + i, y + i + .2, z, z + 9);
-        s += poly(a, on ? "#FDE68A" : "rgba(220,232,250,.85)", 'stroke="rgba(0,0,0,.25)" stroke-width=".6"');
-        s += poly(b, on ? "#F5D46A" : "rgba(190,205,225,.8)", 'stroke="rgba(0,0,0,.25)" stroke-width=".6"');
-        if (on) lights.push(poly(a, "#FDE68A", 'opacity=".9"'), poly(b, "#F5D46A", 'opacity=".85"'));
-      }
+      for (let i = .28; i < w - .15; i += .42) pane(onLeft(x + i, x + i + .2, y + d, z, z + 9), lit && r() > .3, "rgba(220,232,250,.85)", "#FDE68A");
+      for (let i = .14; i < d - .15; i += .42) pane(onRight(x + w, y + i, y + i + .2, z, z + 9), lit && r() > .3, "rgba(190,205,225,.8)", "#F5D46A");
     }
     return s;
   }
@@ -474,6 +481,28 @@
     s += `<rect x="${fx - 1}" y="${fy - 62}" width="2.4" height="62" fill="#494D4C"/>
       <rect x="${fx + 1.4}" y="${fy - 62}" width="26" height="7" fill="${BLAU}"/><rect x="${fx + 1.4}" y="${fy - 55}" width="26" height="7" fill="${GRANA}"/>`;
     return { svg: s, peak: 66 };
+  }
+
+  // Squad training ground: a small practice pitch with cones, mini goals and a row of empty
+  // benches, waiting for the agents who'll train here.
+  function squadGround() {
+    const [x, y, w, d] = TRAINING_GROUND;
+    let s = shadowUnder(x, y, w, d) + poly([iso(x, y), iso(x + w, y), iso(x + w, y + d), iso(x, y + d)], "#2F8445");
+    for (let i = 0; i < 6; i++) s += poly([iso(x + i * w / 6, y + .15), iso(x + (i + .5) * w / 6, y + .15), iso(x + (i + .5) * w / 6, y + d - .15), iso(x + i * w / 6, y + d - .15)], TURF2);
+    s += poly([iso(x + .15, y + .15), iso(x + w - .15, y + .15), iso(x + w - .15, y + d - .15), iso(x + .15, y + d - .15)], "none", 'stroke="#fff" stroke-width="1.2"');
+    // Two rows of cones for dribbling drills.
+    for (let i = 0; i < 6; i++) [y + .6, y + d - .6].forEach(cy => {
+      const [px, py] = iso(x + .8 + i * .45, cy);
+      s += `<polygon points="${px - 2.5},${py} ${px + 2.5},${py} ${px},${py - 6}" fill="#F79009"/>`;
+    });
+    // Mini goals at each end.
+    [[x + .2, -1], [x + w - .2, 1]].forEach(([gx]) => {
+      const a = iso(gx, y + d / 2 - .3), b = iso(gx, y + d / 2 + .3);
+      s += `<path d="M${a[0]},${a[1]} V${a[1] - 8} L${b[0]},${b[1] - 8} V${b[1]}" fill="none" stroke="#fff" stroke-width="1.4"/>`;
+    });
+    // Empty benches along the near side: room for 11 players and 5 substitutes.
+    for (let i = 0; i < 4; i++) s += box(x + 2.4 + i * .42, y + d + .15, .32, .12, 3, i % 2 ? GRANA : BLAU);
+    return s;
   }
 
   function building(x, y, h, color, style, w = 2, d = 2) {
@@ -710,61 +739,40 @@
     <rect width="${width}" height="2" fill="${tier === 0 ? GOLD : "rgba(255,255,255,.55)"}"/>
     ${tier === 2 ? `<rect y="${height - 8}" width="${width}" height="8" fill="#16283A"/><rect y="${height - 8}" width="${width}" height="8" fill="url(#pt-vip)"/>` : ""}</g>`;
 
-  const ROOF_LIFT = 72;
-
-  // The two back stands rise in three tiers under a white cantilever roof; their walls face the pitch.
+  // The two back stands rise in three tiers, open to the sky; their walls face the pitch.
   function backStands(objects) {
     // Back-right stand: runs along x on the far side (small y).
-    let y = PITCH.y0 - .2, below = 0;
+    // Within the stands, the tiers nearest the pitch are drawn last.
+    let y = PITCH.y0 - STAND_GAP, below = 0;
     SEAT_TIERS.forEach((t, i) => {
       y -= t.depth;
-      const x0 = 5.6 - i * .4, x1 = 13.6 + i * .4;
-      objects.push({ z: x0 + y - 1, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below, i) });
+      const x0 = 5.2 - i * .4, x1 = 13.6 + i * .4;
+      objects.push({ z: STAND_Z + (x0 + y) / 100, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below, i) });
       below = t.h;
     });
     // Back-left stand: runs along y on the near-left side (small x).
-    let x = PITCH.x0 - .2; below = 0;
+    let x = PITCH.x0 - STAND_GAP; below = 0;
     SEAT_TIERS.forEach((t, i) => {
       x -= t.depth;
-      const y0 = 5.1 - i * .4, y1 = 10.9 + i * .4;
-      objects.push({ z: x + y0 - 1, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below, i) });
+      const y0 = 4.7 - i * .4, y1 = 10.9 + i * .4;
+      objects.push({ z: STAND_Z + (x + y0) / 100, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below, i) });
       below = t.h;
     });
     // The corner that joins them: a glass-clad tower with Blaugrana fins.
-    objects.push({ z: 8, svg: box(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "#2B3E55") + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "glass", false) +
+    objects.push({ z: STAND_Z - .01, svg:box(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "#2B3E55") + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "glass", false) +
       `<g transform="${shearL(STANDS.x0, STANDS.y0 + 1.2, 62)}">${[0, 1, 2, 3].map(i => `<rect x="${6 + i * 10}" width="3" height="57" fill="${i % 2 ? GRANA : BLAU}"/>`).join("")}</g>` });
-    objects.push({ z: 8.6, svg: roofs() });
-  }
-
-  // White cantilever roofs over the back stands, on slim columns, with a gold LED edge facing the pitch.
-  function roofs() {
-    const r1 = [4.6, 3.55, 14.6, 5.15], r2 = [3.55, 4.6, 5.15, 11.7];   // [x0, y0, x1, y1]
-    let s = "";
-    [[r1[0] + .3, r1[1] + .15], [7.5, r1[1] + .15], [10.5, r1[1] + .15], [r1[2] - .3, r1[1] + .15], [r2[0] + .15, 7.4], [r2[0] + .15, r2[3] - .3]].forEach(([cx, cy]) => {
-      const a = iso(cx, cy, 48), b = iso(cx, cy, ROOF_LIFT);
-      s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#A6ABAA" stroke-width="2.4"/>`;
-    });
-    [r1, r2].forEach(([x0, y0, x1, y1]) => {
-      const top = [iso(x0, y0, ROOF_LIFT), iso(x1, y0, ROOF_LIFT), iso(x1, y1, ROOF_LIFT), iso(x0, y1, ROOF_LIFT)];
-      s += poly(top.map(([px, py]) => [px, py + 5]), "rgba(0,0,0,.12)") + poly(top, "rgba(250,252,252,.92)", 'stroke="#C4C9C8" stroke-width=".8"');
-      s += `<g transform="${shearTop(x0, y0, ROOF_LIFT)}"><rect width="${(x1 - x0) * 36}" height="${(y1 - y0) * 36}" fill="url(#pt-truss)"/></g>`;
-    });
-    // LED edges along the pitch side of each roof.
-    const e1 = [iso(r1[0], r1[3], ROOF_LIFT), iso(r1[2], r1[3], ROOF_LIFT)], e2 = [iso(r2[2], r2[1], ROOF_LIFT), iso(r2[2], r2[3], ROOF_LIFT)];
-    [e1, e2].forEach(([a, b]) => s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${GOLD}" stroke-width="2"/>`);
-    if (PHASES[phase].lit) [e1, e2].forEach(([a, b]) => lights.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#FFE27A" stroke-width="3" opacity=".9"/>`));
-    return s;
   }
 
   // Advertising boards round the pitch, in alternating Blaugrana panels.
   function adBoards(objects) {
     const { x0, x1, y0, y1 } = PITCH;
+    // The far boards stand in front of the back stands, so they're drawn just after them.
     for (let x = x0; x < x1 - .01; x += 1) {
-      objects.push({ z: x + y0 - .4, svg: box(x, y0 - .45, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? GRANA : BLAU) });
+      objects.push({ z: STAND_Z + 1, svg:box(x, y0 - .45, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? GRANA : BLAU) });
       objects.push({ z: x + y1 + .6, svg: box(x, y1 + .4, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? BLAU : GRANA) });
     }
     for (let y = y0; y < y1 - .01; y += 1) {
-      objects.push({ z: x0 + y - .4, svg: box(x0 - .45, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? GRANA : BLAU) });
+      objects.push({ z: STAND_Z + 1, svg:box(x0 - .45, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? GRANA : BLAU) });
       if (y > CENTRE[1] - 1.2 && y < CENTRE[1] + .2) continue;   // a gap behind the goal
       objects.push({ z: x1 + y + .6, svg: box(x1 + .5, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? BLAU : GRANA) });
     }
@@ -804,10 +812,18 @@
 
   // Floodlight masts at the four corners; at dusk and night they light the pitch.
   // The front-right mast sits further out than the others so it never crosses the pitch on screen.
-  const FLOODLIGHTS = [[4, 3.5], [14.8, 3.2], [4, 12.5], [16.8, 10.8]];
+  const FLOODLIGHTS = [[3.3, 2.8], [14.8, 3.2], [4, 12.5], [16.8, 10.8]];
   function floodlight(x, y) {
     const [bx, by] = iso(x, y), top = by - 128, lit = PHASES[phase].lit;
-    // Four lamps per mast, each with its own glow, plus a soft halo round the head.
+    // The two front masts face away from you, towards the pitch: you see the backs of their lamps,
+    // with just a rim of light round the edge.
+    if (x + y > CENTRE[0] + CENTRE[1]) {
+      if (lit) lights.push(`<rect x="${bx - 17}" y="${top - 13}" width="34" height="2.5" rx="1" fill="#FFF4C2" opacity=".8"/>`);
+      return `<rect x="${bx - 2}" y="${top}" width="4" height="128" fill="#686D6C"/>
+        <rect x="${bx - 16}" y="${top - 12}" width="32" height="14" rx="2" fill="#272B2A"/>
+        ${[0, 1, 2, 3].map(i => `<rect x="${bx - 14 + i * 7.3}" y="${top - 10}" width="5.6" height="10" rx="1" fill="#3B403F"/>`).join("")}`;
+    }
+    // The back masts face you: four lamps, each with its own glow, plus a soft halo round the head.
     if (lit) lights.push(`<circle cx="${bx}" cy="${top - 5}" r="26" fill="url(#bulb)" opacity=".55"/>` +
       [0, 1, 2, 3].map(i => `<circle cx="${bx - 11 + i * 7.3}" cy="${top - 5}" r="9" fill="url(#bulb)"/>`).join(""));
     return `<rect x="${bx - 2}" y="${top}" width="4" height="128" fill="#686D6C"/>
@@ -817,19 +833,22 @@
 
   // The big screen above the back stand doubles as the scoreboard.
   function bigScreen() {
-    // It sits on top of the roof, so nothing on the stand or behind it can cover it.
-    const x = 8, y = PITCH.y0 - 1.6, w = 3.4 * W / 2, z = ROOF_LIFT + 50;
+    // It stands on posts above the top tier of the back stand.
+    const top = SEAT_TIERS[SEAT_TIERS.length - 1].h, x = 8, y = STANDS.y0, w = 3.4 * W / 2, z = top + 52;
     const score = SCORE ? `${SCORE.clients} PAYING · ${SCORE.mrr || "—"} MRR${SCORE.mrrUnconfirmed ? " (CHECK)" : ""}` : "SCOREBOARD NOT CONNECTED";
-    const [a, b] = [iso(x + .4, y + .1, ROOF_LIFT), iso(x + 3, y + .1, ROOF_LIFT)];
-    return `<g class="clickable" data-kind="screen">
-      <line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 10}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 10}" stroke="#494D4C" stroke-width="3"/>
+    const [a, b] = [iso(x + .4, y + .1, top), iso(x + 3, y + .1, top)];
+    const posts = `<line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 10}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 10}" stroke="#494D4C" stroke-width="3"/>`;
+    const screen = `<g class="clickable" data-kind="screen" pointer-events="all">
       <g transform="${shearL(x, y + .1, z)}">
         <rect width="${w}" height="40" rx="2" fill="#0A0D0C" stroke="#272B2A" stroke-width="2"/>
         <rect x="3" y="3" width="${w - 6}" height="9" fill="${BLAU}"/><rect x="3" y="3" width="${(w - 6) / 2}" height="9" fill="${GRANA}"/>
         <text x="${w / 2}" y="10" text-anchor="middle" font-size="6.5" font-weight="700" fill="#FCFFFE" font-family="Inter" letter-spacing=".12em">CAMP NOU</text>
-        <text x="${w / 2}" y="27" text-anchor="middle" font-size="${score.length > 28 ? 7 : 8.5}" font-weight="700" fill="${GOLD}" font-family="Inter">${score}</text>
+        <text x="${w / 2}" y="27" text-anchor="middle" font-size="${score.length > 28 ? 6.2 : 8.5}" font-weight="700" fill="${GOLD}" font-family="Inter">${score}</text>
         <text x="${w / 2}" y="36" text-anchor="middle" font-size="5.5" fill="#A6ABAA" font-family="Inter">checked ${SCORE && SCORE.checked ? SCORE.checked : "—"}</text>
       </g></g>`;
+    // The screen gives off its own light, so after dark it isn't dimmed with the rest of the scene.
+    if (PHASES[phase].lit) { lights.push(screen); return posts; }
+    return posts + screen;
   }
 
   // The pitch: mown stripes, white lines, both goal boxes and the centre circle.
@@ -984,7 +1003,11 @@
     lights = [];
     const steps = daySteps(), cur = steps.findIndex(s => !s.cap && !s.done);
     const groups = groupItems(mode);
-    let path = "", objects = [], labels = "";
+    let path = "", labels = "";
+    // Each object keeps the lights it switched on while being drawn, so they glow in its place in the
+    // drawing order and anything standing in front still covers them.
+    const objects = [];
+    objects.push = o => Array.prototype.push.call(objects, { ...o, lit: lights.splice(0) });
 
     // The match: a chalk pass line from kick-off through every task to the goal, with a disc per task.
     const lay = trackLayout(steps);
@@ -1010,14 +1033,18 @@
       const [cx, cy, rx, ry] = disc(c, rad, 2);
       const color = s.src === "local" ? "#0A7E57" : AREAS[s.area].color;
       const ring = s.done ? "" : s.due === "overdue" ? `<ellipse cx="${cx}" cy="${cy}" rx="${rx + 2.5}" ry="${ry + 1.5}" fill="none" stroke="#F97066" stroke-width="2"/>` : "";
-      path += `<g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="${s.id}" ${s.done ? 'opacity=".55"' : ""}>
+      // Discs shrink as you zoom in, so they stay the same size on screen (see fit()).
+      const keep = `class="disc" style="transform-origin:${cx}px ${cy}px"`;
+      path += `<g ${keep}><g class="clickable ${isSel ? "sel" : ""}" data-kind="step" data-id="${s.id}" ${s.done ? 'opacity=".55"' : ""}>
         <ellipse cx="${cx}" cy="${cy + 2}" rx="${rx}" ry="${ry}" fill="rgba(0,0,0,.25)"/>
         <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${s.done ? "#FCFFFE" : color}" stroke="#FCFFFE" stroke-width="1.2"/>${ring}
         <text x="${cx}" y="${cy + 3.4 * k}" text-anchor="middle" font-size="${Math.max(7, 10 * k)}" font-weight="700" fill="${s.done ? "#0A7E57" : "#FCFFFE"}" font-family="Inter">${s.done ? "✓" : n}</text></g>`;
       if (n === cur) {
         path += `<ellipse class="glow" cx="${cx}" cy="${cy}" rx="${rx + 5}" ry="${ry + 3}" fill="none" stroke="${GOLD}" stroke-width="3"/>`;
-        objects.push({ z: c[0] + c[1] + .1, svg: ball(cx + rx * .7, cy - ry * .2) });
+        // Kept in front of the stands even at the far corners of the pitch.
+        objects.push({ z: Math.max(c[0] + c[1], STAND_Z + 1) + .1, svg: `<g ${keep}>${ball(cx + rx * .7, cy - ry * .2)}</g>` });
       }
+      path += "</g>";
     });
 
     // The stadium around the pitch. The floodlight glow is laid on the grass, under the passes and stands.
@@ -1025,8 +1052,13 @@
     backStands(objects);
     frontStands(objects);
     adBoards(objects);
-    // Drawn after everything behind the stadium (the offices, trees and lamps at the back), so nothing covers it.
-    objects.push({ z: 14, svg: bigScreen() });
+    // Drawn after the back stand and everything behind it (the offices and their windows), so nothing covers it.
+    objects.push({ z: STAND_Z + .5, svg: bigScreen() });
+    objects.push({ z: TRAINING_GROUND[0] + TRAINING_GROUND[1], svg: squadGround() });
+    {
+      const [tx, ty] = iso(TRAINING_GROUND[0] + TRAINING_GROUND[2] / 2, TRAINING_GROUND[1] + TRAINING_GROUND[3] / 2, 22);
+      labels += `<div class="label small nonum" style="left:${tx}px;top:${ty}px"><span class="nm">Squad training<span class="sub">kept free for your agents</span></span></div>`;
+    }
     FLOODLIGHTS.forEach(([x, y]) => objects.push({ z: x + y + .5, svg: floodlight(x, y) }));
     // Under the floodlights the pitch glows like a match night: beams from every mast, and a bright
     // wash over the grass (blended so the passes stay readable, just brighter).
@@ -1061,6 +1093,7 @@
     const nb = NOTICE_BOARD, wt = WATCHTOWER;
     objects.push({ z: nb[0] + nb[1] + 2, svg: `<g class="clickable ${selected && selected.kind === "list" ? "sel" : ""}" data-kind="list">${noticeBoard(nb[0], nb[1])}</g>` });
     const failed = RUNS.filter(r => !r.ok).length;
+    if (PHASES[phase].lit) { const [bx, by] = iso(wt[0] + .5, wt[1] + .5, 74); lights.push(`<circle cx="${bx}" cy="${by}" r="18" fill="url(#bulb)"/>`); }
     objects.push({ z: wt[0] + wt[1] + 1, svg: `<g class="clickable ${selected && selected.kind === "runs" ? "sel" : ""}" data-kind="runs">
       ${box(wt[0], wt[1], 1, 1, 14, "#686D6C") + walls(wt[0], wt[1], 1, 1, 14, "stone", false)}${box(wt[0] + .2, wt[1] + .2, .6, .6, 56, "#A6ABAA", 14) + walls(wt[0] + .2, wt[1] + .2, .6, .6, 70, "stone", false)}
       ${box(wt[0] + .05, wt[1] + .05, .9, .9, 8, "#494D4C", 70)}${pyramid(wt[0] + .05, wt[1] + .05, .9, .9, 78, failed ? "#B42318" : "#006E4A", 22)}</g>` });
@@ -1068,14 +1101,14 @@
     const [wx, wy] = iso(wt[0] + .5, wt[1] + .5, 114);
     labels += `<div class="label small" data-for="list" style="left:${nx}px;top:${ny}px"><span class="nm">My list</span><span class="n" style="background:#B45309">${MY_LIST.filter(t => !t.done).length}</span></div>`;
     labels += `<div class="label small ${failed ? "" : "nonum"}" data-for="runs" style="left:${wx}px;top:${wy}px"><span class="nm">Night watch</span>${failed ? `<span class="n" style="background:#B42318">${failed} !</span>` : ""}</div>`;
-    if (PHASES[phase].lit) { const [bx, by] = iso(wt[0] + .5, wt[1] + .5, 74); lights.push(`<circle cx="${bx}" cy="${by}" r="18" fill="url(#bulb)"/>`); }
 
     TREES.forEach(([x, y], i) => objects.push({ z: x + y + 1, svg: tree(x, y, i % 3 === 0) }));
     LAMPS.forEach(([x, y]) => objects.push({ z: x + y, svg: lamp(x, y) }));
     countryside(objects);
     objects.sort((a, b) => a.z - b.z);
 
-    // Time of day: a colour filter over the whole base, then the lights on top so they glow through it.
+    // Time of day: a colour filter over the scene. Each object's lights go straight after it, outside
+    // the filter, so they glow through the dusk but stay behind whatever is drawn in front.
     const ph = PHASES[phase];
     const [r, g, b] = ph.tint ? [1, 3, 5].map(i => 1 - ph.op * (1 - parseInt(ph.tint.slice(i, i + 2), 16) / 255)) : [1, 1, 1];
     const defs = `<defs>
@@ -1093,7 +1126,6 @@
       <radialGradient id="pitchGlow"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".5"/><stop offset=".6" stop-color="#FFF6D8" stop-opacity=".18"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></radialGradient>
       <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4C2" stop-opacity=".55"/><stop offset="1" stop-color="#FFF4C2" stop-opacity="0"/></linearGradient>
       <pattern id="pt-vip" width="12" height="8" patternUnits="userSpaceOnUse"><rect x="1" y="1.5" width="10" height="5" fill="${PHASES[phase].lit ? "#F5D46A" : "#5B7A99"}" opacity=".8"/><path d="M0 0V8" stroke="#0A0D0C" stroke-width="1"/></pattern>
-      <pattern id="pt-truss" width="22" height="22" patternUnits="userSpaceOnUse"><path d="M0 0L22 22M22 0L0 22" stroke="rgba(166,171,170,.35)" stroke-width=".7"/><path d="M0 .5H22" stroke="rgba(166,171,170,.5)" stroke-width=".8"/></pattern>
       <pattern id="pt-seats" width="10" height="6" patternUnits="userSpaceOnUse"><rect width="10" height="3" fill="${BLAU}"/><rect y="3" width="10" height="3" fill="${GRANA}"/><path d="M0 2.6H10M0 5.6H10" stroke="rgba(0,0,0,.25)" stroke-width=".6"/></pattern>
       <pattern id="pt-crowd" width="17" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.3" fill="#FCFFFE" opacity=".8"/><circle cx="7.5" cy="5" r="1.2" fill="${GOLD}" opacity=".85"/><circle cx="12" cy="1.6" r="1.2" fill="#E0AC69" opacity=".9"/><circle cx="15" cy="6.4" r="1.3" fill="#FCFFFE" opacity=".6"/><circle cx="4.5" cy="7" r="1.2" fill="#8D5524" opacity=".85"/></pattern>
       <pattern id="pt-net" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M0 0L4 4M4 0L0 4" stroke="rgba(255,255,255,.55)" stroke-width=".5"/></pattern>
@@ -1101,8 +1133,15 @@
       <pattern id="pt-gravel" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".8" fill="rgba(0,0,0,.18)"/><circle cx="4.5" cy="4" r=".7" fill="rgba(255,255,255,.3)"/><circle cx="4" cy="1" r=".5" fill="rgba(0,0,0,.12)"/></pattern></defs>`;
 
     const tod = ph.tint ? 'filter="url(#tod)"' : "";
+    let scene = "", run = path + walkers();
+    objects.forEach(o => {
+      run += o.svg;
+      if (!o.lit.length) return;
+      scene += `<g ${tod}>${run}</g><g pointer-events="none">${o.lit.join("")}</g>`;
+      run = "";
+    });
     document.getElementById("svg").innerHTML = defs + `<g ${tod}>${ground()}</g><g pointer-events="none">${pitchLight}</g>` +
-      `<g ${tod}>` + path + walkers() + objects.map(o => o.svg).join("") + `</g><g pointer-events="none">${lights.join("")}</g>`;
+      scene + `<g ${tod}>${run}</g>`;
     document.getElementById("labels").innerHTML = labels;
 
     const p = progress();
@@ -1308,6 +1347,9 @@
     const lim = [st.width * (zoom - .4), st.height * (zoom - .4)].map(v => Math.max(60, v / 1.6));
     pan = pan.map((p, i) => Math.max(-lim[i], Math.min(lim[i], p)));
     document.getElementById("map").style.transform = `translate(-50%, -50%) translate(${pan[0]}px, ${pan[1]}px) scale(${s})`;
+    // Zooming in spreads the passes apart but keeps each disc the same size on screen.
+    // (Zooming out doesn't grow them, or they'd start overlapping.)
+    document.getElementById("svg").style.setProperty("--disc-scale", 1 / Math.max(1, zoom));
   }
   function setZoom(z) {
     zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
@@ -1316,7 +1358,12 @@
     fit();
   }
   window.addEventListener("resize", fit);
-  stage.addEventListener("wheel", e => { e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
+  // Ctrl + scroll zooms; a plain scroll is left alone, so lists in the pop-ups scroll as usual.
+  stage.addEventListener("wheel", e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    setZoom(zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+  }, { passive: false });
 
   // Drag to move around. A real drag swallows the click that ends it, so it doesn't open a pop-up.
   let drag = null, swallowClick = false;
