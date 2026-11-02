@@ -105,6 +105,9 @@ class Handler(SimpleHTTPRequestHandler):
             _, version = snapshot.current()
             self.send_body(200, json.dumps({"version": version}), "application/json")
             return
+        if path == "/api/feedback":
+            self.send_body(200, json.dumps({"count": collectors.feedback_count()}), "application/json")
+            return
         super().do_GET()
 
     def do_POST(self):
@@ -121,7 +124,17 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_response(500)
             self.end_headers()
             return
-        # The only thing the page may write: Omkar's own list, to data\my-list.md.
+        if self.path == "/api/feedback":
+            # A note from the test run, appended to data\feedback.md.
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                collectors.add_feedback(body.get("text", ""))
+                self.send_body(200, json.dumps({"count": collectors.feedback_count()}), "application/json")
+            except (ValueError, TypeError, AttributeError, OSError):
+                self.send_response(400)
+                self.end_headers()
+            return
+        # The other thing the page may write: Omkar's own list, to data\my-list.md.
         if self.path != "/api/my-list":
             self.send_error(404)
             return
@@ -151,6 +164,21 @@ def already_running():
         return False
 
 
+ICON = ROOT / "command-centre.ico"
+
+
+def use_brand_icon(window):
+    """Windows gives the window Python's icon; swap in the Spring Money mark once it's shown.
+    Purely cosmetic, so any problem here is ignored."""
+    try:
+        from System import Action
+        from System.Drawing import Icon
+        form = window.native
+        form.Invoke(Action(lambda: setattr(form, "Icon", Icon(str(ICON)))))
+    except Exception:
+        pass
+
+
 PORT_TAKEN = f"""<body style="font-family:Segoe UI,sans-serif;padding:40px;color:#272B2A;background:#FCFFFE">
 <h2>Command Centre can't start</h2>
 <p>Another program on this PC is using port {PORT}, which the Command Centre needs.</p>
@@ -169,7 +197,7 @@ def main():
             webview.create_window("Command Centre", html=PORT_TAKEN, width=640, height=320)
             webview.start()
             return
-    webview.create_window(
+    window = webview.create_window(
         "Command Centre",
         f"http://127.0.0.1:{PORT}/",
         width=1440,
@@ -178,6 +206,7 @@ def main():
         maximized=True,
         background_color="#FCFFFE",
     )
+    window.events.shown += lambda: use_brand_icon(window)
     webview.start(private_mode=False, storage_path=str(DATA / "webview"))
 
 

@@ -332,6 +332,30 @@ def write_my_list(items):
     write_atomic(MY_LIST_FILE, "\n".join(lines) + "\n")
 
 
+# ---------- Feedback notes from the test run ----------
+
+FEEDBACK_FILE = DATA / "feedback.md"
+
+
+def add_feedback(text):
+    """Appends one dated note to data\\feedback.md, kept for the sign-off review."""
+    text = " ".join(str(text).split())
+    if not text:
+        raise ValueError("empty note")
+    FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    new = not FEEDBACK_FILE.exists()
+    with FEEDBACK_FILE.open("a", encoding="utf-8") as f:
+        if new:
+            f.write("# Command Centre feedback\n\n_Notes from using the app, newest at the bottom._\n\n")
+        f.write(f"- **{datetime.now():%a %d %b, %H:%M}** · {text}\n")
+
+
+def feedback_count():
+    if not FEEDBACK_FILE.exists():
+        return 0
+    return sum(1 for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines() if line.startswith("- **"))
+
+
 def frappe_rules():
     """The sorting rules above, in a form the page can show as-is."""
     areas = {}
