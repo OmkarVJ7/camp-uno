@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option B · Cockpit grid</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@500;600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--sm-paper-p1); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.45; }
+  .sample { background: var(--sm-amber-300); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; }
+  .bar { background: var(--sm-paper); border-bottom: 1px solid var(--sm-border); padding: 14px 28px; display: flex; align-items: center; gap: 24px; }
+  .bar img { height: 22px; }
+  .bar h1 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 20px; }
+  .bar .sp { flex: 1; }
+  .bar .meta { font-size: 13px; color: var(--sm-text-secondary); }
+  .btn { border: 1px solid var(--sm-border-input); background: var(--sm-paper); border-radius: 8px; padding: 6px 12px; font: 600 13px var(--sm-font-sans); color: var(--sm-text); }
+  .grid { padding: 20px 28px; display: grid; gap: 16px; grid-template-columns: repeat(4, 1fr); grid-auto-rows: min-content; }
+  .stat { background: var(--sm-paper); border: 1px solid var(--sm-border); border-radius: 12px; padding: 16px 18px; }
+  .stat.hero { background: var(--sm-green-800); color: var(--sm-paper); border: 0; }
+  .stat.hero .l, .stat.hero .f { color: var(--sm-green-100); }
+  .stat .l { font-size: 13px; color: var(--sm-text-secondary); font-weight: 500; }
+  .stat .n { font-size: 36px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; margin: 4px 0; }
+  .stat .f { font-size: 12px; color: var(--sm-text-secondary); }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; vertical-align: middle; }
+  .card { background: var(--sm-paper); border: 1px solid var(--sm-border); border-radius: 12px; display: flex; flex-direction: column; }
+  .card header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid var(--sm-border); }
+  .card h2 { font-size: 15px; font-weight: 600; }
+  .count { background: var(--sm-green-bg-2); color: var(--sm-green-800); font-weight: 600; font-size: 12px; border-radius: 999px; padding: 1px 8px; }
+  .card header .ts { margin-left: auto; font-size: 12px; color: var(--sm-text-secondary); }
+  .stale { color: var(--sm-amber-700) !important; font-weight: 600; }
+  .span2 { grid-column: span 2; } .row2 { grid-row: span 2; }
+  .item { display: flex; gap: 12px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--sm-paper-p2); text-decoration: none; color: inherit; }
+  .item:last-child { border-bottom: 0; }
+  .item:hover { background: var(--sm-green-bg-1); }
+  .item .main { flex: 1; min-width: 0; }
+  .item .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { color: var(--sm-text-secondary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .late { background: #FDECEA; color: var(--sm-red-700); }
+  .today { background: var(--sm-green-bg-2); color: var(--sm-green-800); }
+  .soon { background: var(--sm-paper-p2); color: var(--sm-black-800); }
+  .ready { background: var(--sm-blue-100); color: #1D4E9E; }
+  .arrow { color: var(--sm-link); font-weight: 600; }
+  .day { width: 44px; text-align: center; flex: none; }
+  .day b { display: block; font-size: 18px; } .day span { font-size: 11px; color: var(--sm-text-secondary); text-transform: uppercase; }
+  .box { width: 18px; height: 18px; border: 1.5px solid var(--sm-border-input); border-radius: 4px; flex: none; }
+  .box.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .done { color: var(--sm-text-disabled); text-decoration: line-through; }
+  .st { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .g { background: var(--sm-green-500); } .r { background: var(--sm-red-700); }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+<div class="bar">
+  <img src="springmoney-logo-primary.svg" alt="Spring Money">
+  <h1>Command Centre</h1>
+  <div class="sp"></div>
+  <span class="meta">Monday, 9 November · refreshed 08:42</span>
+  <button class="btn">Refresh</button>
+</div>
+<div class="grid">
+  <div class="stat hero"><div class="l">Follow-ups due</div><div class="n">4</div><div class="f">1 overdue</div></div>
+  <div class="stat"><div class="l">Drafts waiting</div><div class="n">3</div><div class="f">Oldest: 2 days</div></div>
+  <div class="stat"><div class="l">Paying clients</div><div class="n">00</div><div class="f">Last checked 6 Nov</div></div>
+  <div class="stat"><div class="l">MRR <span class="check">CHECK</span></div><div class="n">₹0.0L</div><div class="f">Unconfirmed · clients-and-revenue.md</div></div>
+
+  <div class="card span2 row2">
+    <header><h2>Today's follow-ups</h2><span class="count">4</span><span class="ts">Frappe · 08:42</span></header>
+    <a class="item" href="#"><div class="main"><div class="t">Sample Wealth Partners</div><div class="s">Contact name · Send the demo recap and pricing note</div></div><span class="tag late">2 days late</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Example Capital Advisors</div><div class="s">Contact name · Confirm Thursday call time</div></div><span class="tag today">Today</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Placeholder Investments</div><div class="s">Contact name · Follow up on WhatsApp after email</div></div><span class="tag today">Today</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Demo Financial Services</div><div class="s">Contact name · Share onboarding checklist</div></div><span class="tag today">Today</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Illustrative Advisory LLP</div><div class="s">Contact name · Send case study</div></div><span class="tag today">Today</span><span class="arrow">→</span></a>
+  </div>
+
+  <div class="card span2">
+    <header><h2>Drafts waiting for me</h2><span class="count">3</span><span class="ts">Gmail · 08:40</span></header>
+    <a class="item" href="#"><div class="main"><div class="t">Following up on our conversation</div><div class="s">contact@samplewealth.in</div></div><span class="tag soon">2 days</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Weekly update for Nikhil</div><div class="s">nikhil@…</div></div><span class="tag soon">3 days</span><span class="arrow">→</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Intro: Spring Money for your practice</div><div class="s">contact@example.in</div></div><span class="tag soon">Today</span><span class="arrow">→</span></a>
+  </div>
+
+  <div class="card span2">
+    <header><h2>Reminders</h2><span class="ts">Next 7 days</span></header>
+    <div class="item"><div class="day"><b>9</b><span>Mon</span></div><div class="main"><div class="t">Call with sample advisor · 15:00</div><div class="s">Frappe follow-up</div></div></div>
+    <div class="item"><div class="day"><b>13</b><span>Fri</span></div><div class="main"><div class="t">Friday weekly update · 16:03</div><div class="s">Scheduled reminder</div></div></div>
+  </div>
+
+  <div class="card span2">
+    <header><h2>Social this week</h2><span class="ts">Content calendar · 08:41</span></header>
+    <a class="item" href="#"><div class="main"><div class="t">Tue · LinkedIn · Company</div><div class="s">E:\Spring Money Product Videos\…\reel-01.mp4</div></div><span class="tag ready">Ready</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Thu · Instagram · Company</div><div class="s">No file yet</div></div><span class="tag soon">To fill</span></a>
+    <a class="item" href="#"><div class="main"><div class="t">Mon · LinkedIn · Omkar</div><div class="s">View post</div></div><span class="tag today">Published</span></a>
+  </div>
+
+  <div class="card">
+    <header><h2>My list</h2><span class="ts">On this PC</span></header>
+    <div class="item"><span class="box"></span><div class="main">Read the partner agreement draft</div></div>
+    <div class="item"><span class="box"></span><div class="main">Homework: pricing page notes</div></div>
+    <div class="item"><span class="box on"></span><div class="main done">Book travel for client visit</div></div>
+  </div>
+
+  <div class="card">
+    <header><h2>Last night's runs</h2><span class="ts stale">1 issue</span></header>
+    <div class="item"><span class="st g"></span><div class="main">BD digest · 09:13</div></div>
+    <div class="item"><span class="st g"></span><div class="main">Reminders · 3 created</div></div>
+    <div class="item"><span class="st r"></span><div class="main">Weekly update · no file</div></div>
+  </div>
+</div>
+</body>
+</html>

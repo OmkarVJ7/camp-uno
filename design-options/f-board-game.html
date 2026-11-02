@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option F · Board game</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--sm-paper-p1); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.45; }
+  .sample { background: var(--sm-amber-300); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; }
+  .top { display: flex; align-items: center; gap: 20px; padding: 14px 28px; }
+  .top img { height: 22px; }
+  .top h1 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 20px; }
+  .top .sp { flex: 1; }
+  .meta { font-size: 13px; color: var(--sm-text-secondary); }
+  .switch { display: flex; border: 1.5px solid var(--sm-text); border-radius: 8px; overflow: hidden; }
+  .switch button { border: 0; background: var(--sm-paper); font: 600 12px var(--sm-font-sans); padding: 6px 12px; cursor: pointer; color: var(--sm-text); }
+  .switch button.on { background: var(--sm-text); color: var(--sm-paper); }
+  .bank { background: var(--sm-paper); border: 1.5px dashed var(--sm-border-input); border-radius: 8px; padding: 4px 10px; font-size: 12px; color: var(--sm-text-secondary); }
+  .bank b { color: var(--sm-text); }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; }
+
+  .wrap { padding: 0 28px 28px; }
+  .board { background: var(--sm-green-bg-2); border: 2px solid var(--sm-green-800); border-radius: 18px; padding: 18px; }
+  .board-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .board-head h2 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 20px; color: var(--sm-green-900); }
+  .board-head span { font-size: 13px; color: var(--sm-green-900); }
+  .track { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+  .sq { position: relative; background: var(--sm-paper); border: 1.5px solid var(--sm-green-800); border-radius: 10px; padding: 10px; min-height: 104px; text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 2px; }
+  .sq .no { font-size: 11px; font-weight: 700; color: var(--sm-text-secondary); }
+  .sq .t { font-weight: 600; font-size: 13px; line-height: 1.3; }
+  .sq .w { margin-top: auto; font-size: 12px; color: var(--sm-text-secondary); }
+  .sq.done { background: var(--sm-green-bg-1); border-style: dashed; }
+  .sq.done .t { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .sq.done::after { content: "✓"; position: absolute; top: 8px; right: 10px; color: var(--sm-green-800); font-weight: 700; }
+  .sq.cur { border: 3px solid var(--sm-text); box-shadow: 0 6px 0 var(--sm-green-800); }
+  .token { position: absolute; top: -14px; right: -10px; width: 34px; height: 34px; border-radius: 50%; background: var(--sm-green-800); color: var(--sm-paper); font: 700 12px var(--sm-font-sans); display: grid; place-items: center; border: 3px solid var(--sm-paper); box-shadow: 0 2px 6px rgba(39,43,42,.3); }
+  .sq.endcap { background: var(--sm-green-800); color: var(--sm-paper); border: 0; justify-content: center; align-items: center; text-align: center; }
+  .sq.endcap .t { font-family: var(--sm-font-serif); font-size: 18px; }
+  .sq.endcap .w { margin: 0; color: var(--sm-green-100); }
+  .late { color: var(--sm-red-700) !important; font-weight: 600; }
+  .src { align-self: flex-start; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; color: var(--sm-paper); }
+
+  .cards { display: grid; grid-template-columns: 1fr 300px; gap: 16px; margin-top: 20px; align-items: start; }
+  .deeds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
+  .deed a .chip { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--sm-paper-p2); color: var(--sm-black-800); white-space: nowrap; }
+  .deed { background: var(--sm-paper); border: 1.5px solid var(--sm-text); border-radius: 12px; overflow: hidden; }
+  .deed .band { color: var(--sm-paper); padding: 10px 14px; text-align: center; }
+  .deed .band .k { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
+  .deed .band h3 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 18px; }
+  .deed .from { font-size: 11px; color: var(--sm-text-secondary); text-align: center; padding: 6px; border-bottom: 1px solid var(--sm-border); }
+  .deed a { display: flex; gap: 8px; padding: 8px 14px; font-size: 13px; text-decoration: none; color: inherit; border-bottom: 1px solid var(--sm-paper-p2); }
+  .deed a:hover { background: var(--sm-green-bg-1); }
+  .deed a .m { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deed a .w { font-size: 12px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .deed a.done .m { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .deed .empty { padding: 12px 14px; font-size: 13px; color: var(--sm-text-secondary); }
+  .side .deed + .deed { margin-top: 16px; }
+  .side .band { background: var(--sm-paper-p2); color: var(--sm-text); }
+  .line { display: flex; gap: 10px; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--sm-paper-p2); font-size: 13px; }
+  .tick { width: 16px; height: 16px; border: 1.5px solid var(--sm-border-input); border-radius: 4px; flex: none; }
+  .tick.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .struck { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .ok { color: var(--sm-green-800); font-weight: 700; } .bad { color: var(--sm-red-700); font-weight: 700; }
+  .muted { color: var(--sm-text-secondary); }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+<div class="top">
+  <img src="springmoney-logo-primary.svg" alt="Spring Money">
+  <h1>Today's board</h1>
+  <div class="sp"></div>
+  <span class="meta">Monday, 9 November · refreshed 08:42</span>
+  <div class="bank">Bank: <b>00</b> clients · <b>₹0.0L</b> MRR <span class="check">CHECK</span> · 6 Nov</div>
+</div>
+
+<div class="wrap">
+  <div class="board">
+    <div class="board-head"><h2>Your moves today</h2><span id="board-progress"></span></div>
+    <div class="track" id="track"></div>
+  </div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<script src="round2-data.js"></script>
+<script>
+  function renderTrack() {
+    // Done squares first (behind the token), then open ones in order.
+    const done = ITEMS.filter(i => i.done), open = ITEMS.filter(i => !i.done);
+    const squares = [
+      { cap: true, t: "Start", w: "09:00" },
+      ...done, ...open,
+      { cap: true, t: "Finish", w: "17:00 review" },
+    ];
+    const cur = done.length + 1;
+    const cols = 7;
+    // Snake the track: row 1 left to right, row 2 right to left.
+    const html = squares.map((s, n) => {
+      const row = Math.floor(n / cols), col = row % 2 ? cols - (n % cols) : (n % cols) + 1;
+      const pos = `grid-row:${row + 1};grid-column:${col}`;
+      if (s.cap) return `<div class="sq endcap" style="${pos}"><div class="t">${s.t}</div><div class="w">${s.w}</div></div>`;
+      return `<a class="sq ${s.done ? "done" : ""} ${n === cur ? "cur" : ""}" href="#" style="${pos}">
+        ${n === cur ? '<span class="token">OJ</span>' : ""}
+        <span class="no">${n}</span>
+        <span class="src" style="background:${AREAS[s.area].color}">${AREAS[s.area].short} · ${SOURCES[s.src].tag}</span>
+        <span class="t">${s.title}</span>
+        <span class="w ${s.due === "overdue" ? "late" : ""}">${s.when}</span>
+      </a>`;
+    }).join("");
+    document.getElementById("track").innerHTML = html;
+    const p = progress();
+    document.getElementById("board-progress").textContent = `${p.done} of ${p.total} squares cleared · ${p.total - p.done} to go`;
+  }
+
+  function renderCards(mode) {
+    const kicker = { area: "Area", source: "Source", urgency: "Due" }[mode];
+    const deeds = groupItems(mode).map(g => {
+      const from = g.from || g.items.filter(i => !i.done).length + " open";
+      return `<div class="deed">
+        <div class="band" style="background:${g.color}"><div class="k">${kicker}</div><h3>${g.label}</h3></div>
+        <div class="from">${from}</div>
+        ${g.items.length ? g.items.map(i => `<a href="#" class="${i.done ? "done" : ""}"><span class="chip">${chip(i, mode)}</span><span class="m">${i.title}</span><span class="w ${i.due === "overdue" ? "late" : ""}">${i.when}</span></a>`).join("") : '<div class="empty">Nothing here.</div>'}
+      </div>`;
+    });
+    const side = `<div class="side">
+      <div class="deed"><div class="band"><div class="k">Your cards</div><h3>My list</h3></div>
+        ${MY_LIST.map(t => `<div class="line"><span class="tick ${t.done ? "on" : ""}"></span><span class="${t.done ? "struck" : ""}">${t.text}</span></div>`).join("")}
+        <div class="line muted">+ Add a card</div></div>
+      <div class="deed"><div class="band"><div class="k">While you slept</div><h3>Last night's runs</h3></div>
+        ${RUNS.map(r => `<div class="line"><span class="${r.ok ? "ok" : "bad"}">${r.ok ? "✓" : "!"}</span><b>${r.name}</b><span class="muted">${r.note}</span></div>`).join("")}</div>
+    </div>`;
+    document.getElementById("cards").innerHTML = `<div class="deeds">${deeds.join("")}</div>` + side;
+  }
+
+  onGroupChange(renderCards);
+  renderTrack(); renderCards(getMode());
+</script>
+</body>
+</html>

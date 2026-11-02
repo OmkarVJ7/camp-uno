@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Command Centre</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { display: grid; grid-template-columns: var(--nav-w, 232px) 1fr; transition: grid-template-columns var(--sm-duration-base) var(--sm-ease-standard); background: var(--sm-paper); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 13px; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+  nav { background: var(--sm-paper); border-right: 1px solid var(--sm-border); padding: 18px 14px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+  .brand img { width: 28px; height: 28px; }
+  .brand b { font-family: var(--sm-font-serif); font-weight: 600; font-size: 17px; white-space: nowrap; }
+  .collapse { margin-left: auto; border: 0; background: none; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); font-size: 16px; line-height: 1; flex: none; }
+  .collapse:hover { background: var(--sm-paper-p1); }
+  body.dark .collapse:hover { background: var(--sm-night); }
+  body.collapsed { --nav-w: 56px; }
+  body.collapsed nav { padding: 18px 8px; overflow: hidden; }
+  body.collapsed nav .sec, body.collapsed nav .foot, body.collapsed .brand b { display: none; }
+  body.collapsed .brand { flex-direction: column; gap: 12px; padding: 0; }
+  body.collapsed .collapse { margin-left: 0; transform: rotate(180deg); }
+  .sec h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--sm-text-secondary); padding: 0 6px 6px; }
+  .opt { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: none; text-align: left; font: 500 13px var(--sm-font-sans); color: var(--sm-text); padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+  .opt:hover { background: var(--sm-paper-p1); }
+  .opt.on { background: var(--sm-green-bg-2); color: var(--sm-green-900); font-weight: 600; }
+  .opt .ic { width: 22px; text-align: center; font-size: 15px; }
+  .opt .sub { margin-left: auto; font-size: 11px; color: var(--sm-text-secondary); font-weight: 500; }
+  .toggle { display: flex; align-items: center; justify-content: space-between; padding: 7px 8px; cursor: pointer; border-radius: 8px; }
+  .toggle:hover { background: var(--sm-paper-p1); }
+  .sw { width: 30px; height: 18px; border-radius: 999px; background: var(--sm-black-400); position: relative; transition: background var(--sm-duration-fast); }
+  .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--sm-paper); transition: left var(--sm-duration-fast); }
+  .toggle.on .sw { background: var(--sm-green-800); }
+  .toggle.on .sw::after { left: 14px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--sm-paper-p1); border-radius: 8px; padding: 3px; }
+  .seg button { border: 0; background: none; font: 600 12px var(--sm-font-sans); padding: 6px 0; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); }
+  .seg button.on { background: var(--sm-paper); color: var(--sm-text); box-shadow: 0 1px 3px rgba(39,43,42,.15); }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+  .conn .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .conn .st { margin-left: auto; font-size: 11px; color: var(--sm-text-secondary); }
+  .d-next { background: var(--sm-amber-300); } .d-ready { background: var(--sm-green-500); } .d-plan { background: var(--sm-black-400); } .d-later { border: 1.5px solid var(--sm-black-400); }
+  .conn.next .st { color: var(--sm-amber-700); font-weight: 600; }
+  .seg.four { grid-template-columns: repeat(4, 1fr); }
+  .now { font-size: 11px; color: var(--sm-text-secondary); padding: 6px 6px 0; }
+
+  body.dark { background: var(--sm-night); color: var(--sm-paper); }
+  body.dark nav { background: var(--sm-night-raised); border-color: var(--sm-black-800); }
+  body.dark .opt { color: var(--sm-paper); }
+  body.dark .opt:hover, body.dark .toggle:hover { background: var(--sm-night); }
+  body.dark .opt.on { background: var(--sm-green-900); color: var(--sm-paper); }
+  body.dark .seg { background: var(--sm-night); }
+  body.dark .seg button.on { background: var(--sm-black-800); color: var(--sm-paper); }
+  body.dark .sec h4, body.dark .conn .st, body.dark .foot, body.dark .now { color: var(--sm-black-500); }
+  body.dark .conn.next .st { color: var(--sm-amber-300); }
+  body.dark .sw { background: var(--sm-black-800); }
+  body.dark .toggle.on .sw { background: var(--sm-green-400); }
+  .foot { margin-top: auto; font-size: 11px; color: var(--sm-text-secondary); padding: 0 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><img src="springmoney-mark.svg" alt=""><b>Command Centre</b><button class="collapse" id="collapse" title="Collapse menu" aria-label="Collapse menu">«</button></div>
+
+  <div class="sec">
+    <h4>Group by</h4>
+    <div class="seg" id="group">
+      <button data-g="area">Area</button><button data-g="source">Source</button><button data-g="urgency">Urgency</button>
+    </div>
+  </div>
+
+  <div class="sec" id="themes">
+    <h4>Theme</h4>
+    <button class="opt" data-t="base"><span class="ic">🏰</span>The Base</button>
+    <button class="opt" data-t="park"><span class="ic">🎢</span>Theme park</button>
+    <button class="opt" data-t="quest"><span class="ic">⚔</span>Quest log</button>
+    <button class="opt" data-t="board"><span class="ic">🎲</span>Board game</button>
+    <div class="toggle" id="rotate"><span>Rotate daily</span><span class="sw"></span></div>
+  </div>
+
+  <div class="sec">
+    <h4>Appearance</h4>
+    <div class="seg" id="appearance"><button data-a="auto">Auto</button><button data-a="light">Light</button><button data-a="dark">Dark</button></div>
+    <div class="now" id="now"></div>
+  </div>
+
+  <div class="sec">
+    <h4>Preview time · mock only</h4>
+    <div class="seg four" id="preview"><button data-p="morning">Morn</button><button data-p="day">Day</button><button data-p="evening">Eve</button><button data-p="night">Night</button></div>
+  </div>
+
+  <div class="sec">
+    <h4>Connections</h4>
+    <div class="conn next"><span class="dot d-next"></span>Slack<span class="st">Connect first</span></div>
+    <div class="conn"><span class="dot d-ready"></span>Frappe CRM<span class="st">Ready</span></div>
+    <div class="conn"><span class="dot d-plan"></span>Gmail<span class="st">Next</span></div>
+    <div class="conn"><span class="dot d-plan"></span>Google Calendar<span class="st">Next</span></div>
+    <div class="conn"><span class="dot d-plan"></span>Google Drive<span class="st">Next</span></div>
+    <div class="conn"><span class="dot d-later"></span>Browser &amp; terminal<span class="st">Later</span></div>
+    <div class="conn"><span class="dot d-later"></span>WhatsApp<span class="st">Later</span></div>
+  </div>
+
+  <div class="foot">Mock-up with sample data.<br>Nothing is connected yet.</div>
+</nav>
+<iframe id="view" title="Command Centre"></iframe>
+
+<script>
+  // The version tag stops the browser showing an old cached copy after a theme file changes.
+  const V = "?v=2";
+  const THEMES = {
+    base: "the-base.html" + V,
+    park: "d-theme-park.html" + V,
+    quest: "e-quest-log.html" + V,
+    board: "f-board-game.html" + V,
+  };
+  const ORDER = Object.keys(THEMES);
+  const view = document.getElementById("view");
+
+  function load(key, fallback) {
+    try { return localStorage.getItem(key) || fallback; } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
+
+  // With rotation on, the theme follows the day count so it changes once a day.
+  function todaysTheme() {
+    return ORDER[Math.floor(Date.now() / 86400000) % ORDER.length];
+  }
+
+  const PHASE_NAMES = { morning: "Morning", day: "Day", evening: "Evening", night: "Night" };
+
+  // Morning until 11, day until 16:30, evening until 19:00, then night.
+  function clockPhase(d = new Date()) {
+    const h = d.getHours() + d.getMinutes() / 60;
+    return h >= 6 && h < 11 ? "morning" : h < 16.5 && h >= 11 ? "day" : h < 19 && h >= 16.5 ? "evening" : "night";
+  }
+
+  // Auto follows the clock (or a preview) and goes dark at night; Light and Dark are fixed.
+  function scene() {
+    const a = load("cc-appearance", "auto");
+    if (a === "light") return { phase: "day", dark: false, note: "Always daytime" };
+    if (a === "dark") return { phase: "night", dark: true, note: "Always night" };
+    const preview = load("cc-preview", "");
+    const phase = preview || clockPhase();
+    return { phase, dark: phase === "night", note: preview ? `Previewing ${PHASE_NAMES[phase].toLowerCase()}` : `Now: ${PHASE_NAMES[phase].toLowerCase()}, from the clock` };
+  }
+
+  function sendGroup() {
+    const s = scene();
+    view.contentWindow && view.contentWindow.postMessage({ group: load("cc-group", "area"), phase: s.phase, dark: s.dark }, "*");
+  }
+
+  function render() {
+    const rotating = load("cc-rotate", "off") === "on";
+    const theme = rotating ? todaysTheme() : load("cc-theme", "base");
+    if (!view.src.endsWith(THEMES[theme])) view.src = THEMES[theme];
+    document.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b.dataset.t === theme));
+    document.getElementById("rotate").classList.toggle("on", rotating);
+    const group = load("cc-group", "area");
+    document.querySelectorAll("[data-g]").forEach(b => b.classList.toggle("on", b.dataset.g === group));
+    const s = scene(), appearance = load("cc-appearance", "auto"), preview = load("cc-preview", "");
+    document.body.classList.toggle("dark", s.dark);
+    document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("on", b.dataset.a === appearance));
+    document.querySelectorAll("[data-p]").forEach(b => b.classList.toggle("on", appearance === "auto" && b.dataset.p === preview));
+    document.getElementById("now").textContent = s.note;
+    sendGroup();
+  }
+
+  document.getElementById("appearance").addEventListener("click", e => {
+    const b = e.target.closest("[data-a]");
+    if (!b) return;
+    save("cc-appearance", b.dataset.a);
+    save("cc-preview", "");
+    render();
+  });
+
+  // Clicking a preview again goes back to the real clock.
+  document.getElementById("preview").addEventListener("click", e => {
+    const b = e.target.closest("[data-p]");
+    if (!b) return;
+    save("cc-appearance", "auto");
+    save("cc-preview", load("cc-preview", "") === b.dataset.p ? "" : b.dataset.p);
+    render();
+  });
+
+  function applyNav() {
+    const collapsed = load("cc-nav", "open") === "collapsed";
+    document.body.classList.toggle("collapsed", collapsed);
+    const b = document.getElementById("collapse");
+    b.title = b.ariaLabel = collapsed ? "Expand menu" : "Collapse menu";
+  }
+  document.getElementById("collapse").addEventListener("click", () => {
+    save("cc-nav", load("cc-nav", "open") === "collapsed" ? "open" : "collapsed");
+    applyNav();
+  });
+  applyNav();
+
+  // Keep Auto in step with the clock, redrawing only when the time of day actually changes.
+  let lastPhase = scene().phase;
+  setInterval(() => { const p = scene().phase; if (p !== lastPhase) { lastPhase = p; render(); } }, 60000);
+
+  view.addEventListener("load", sendGroup);
+
+  document.getElementById("themes").addEventListener("click", e => {
+    const b = e.target.closest("[data-t]");
+    if (b) {
+      // Picking a theme by hand turns rotation off.
+      save("cc-theme", b.dataset.t);
+      save("cc-rotate", "off");
+    } else if (e.target.closest("#rotate")) {
+      save("cc-rotate", load("cc-rotate", "off") === "on" ? "off" : "on");
+    }
+    render();
+  });
+
+  document.getElementById("group").addEventListener("click", e => {
+    const b = e.target.closest("[data-g]");
+    if (!b) return;
+    save("cc-group", b.dataset.g);
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

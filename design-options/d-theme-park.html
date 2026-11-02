@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option D · Theme park</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.45;
+    background-color: var(--sm-green-bg-1);
+    background-image: radial-gradient(var(--sm-green-100) 1px, transparent 1.4px);
+    background-size: 18px 18px;
+  }
+  .sample { background: var(--sm-amber-300); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; }
+  .chunk { background: var(--sm-paper); border: 2px solid var(--sm-text); border-radius: 14px; box-shadow: 4px 4px 0 var(--sm-text); }
+
+  .toolbar { margin: 16px 24px 0; padding: 10px 16px; display: flex; align-items: center; gap: 20px; }
+  .toolbar img { height: 22px; }
+  .rating { display: flex; align-items: center; gap: 10px; flex: 1; max-width: 420px; }
+  .rating b { font-size: 12px; white-space: nowrap; }
+  .meter { flex: 1; height: 14px; border: 2px solid var(--sm-text); border-radius: 999px; overflow: hidden; background: var(--sm-paper-p1); }
+  .meter i { display: block; height: 100%; background: var(--sm-green-800); }
+  .rating span { font-size: 12px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .sp { flex: 1; }
+  .switch { display: flex; border: 2px solid var(--sm-text); border-radius: 999px; overflow: hidden; }
+  .switch button { border: 0; background: none; font: 600 12px var(--sm-font-sans); padding: 5px 12px; cursor: pointer; color: var(--sm-text); }
+  .switch button.on { background: var(--sm-text); color: var(--sm-paper); }
+  .score { font-size: 12px; color: var(--sm-text-secondary); text-align: right; line-height: 1.3; }
+  .score b { color: var(--sm-text); font-size: 13px; }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; }
+
+  .park { display: grid; grid-template-columns: 360px 1fr; gap: 24px; padding: 20px 24px 28px; }
+  h2 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 19px; }
+  .hint { font-size: 12px; color: var(--sm-text-secondary); }
+
+  .queue { padding: 16px 16px 8px; align-self: start; }
+  .queue header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .path { position: relative; padding-left: 26px; }
+  .path::before { content: ""; position: absolute; left: 11px; top: 6px; bottom: 6px; border-left: 3px dashed var(--sm-green-300); }
+  .guest { position: relative; display: block; text-decoration: none; color: inherit; padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; border: 1.5px solid var(--sm-border); background: var(--sm-paper); }
+  .guest:hover { border-color: var(--sm-green-800); }
+  .guest .num { position: absolute; left: -26px; top: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--sm-paper); border: 2px solid var(--sm-text); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+  .guest.now { border: 2px solid var(--sm-green-800); background: var(--sm-green-bg-2); }
+  .guest.now .num { background: var(--sm-green-800); border-color: var(--sm-green-800); color: var(--sm-paper); }
+  .guest.done { opacity: .5; }
+  .guest.done .num { background: var(--sm-green-100); border-color: var(--sm-green-300); }
+  .guest.done .t { text-decoration: line-through; }
+  .guest .t { font-weight: 600; font-size: 13px; }
+  .guest .s { font-size: 12px; color: var(--sm-text-secondary); }
+  .guest .now-label { font-size: 11px; font-weight: 700; color: var(--sm-green-800); text-transform: uppercase; letter-spacing: .05em; }
+  .late { color: var(--sm-red-700); font-weight: 600; }
+
+  .rides { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; align-content: start; }
+  .ride { padding: 0; overflow: hidden; }
+  .ride .head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--sm-paper-g); border-bottom: 2px solid var(--sm-text); }
+  .ride .head svg { width: 44px; height: 44px; flex: none; }
+  .ride .head .q { margin-left: auto; text-align: right; font-size: 11px; color: var(--sm-text-secondary); }
+  .ride .head .q b { display: block; font-size: 20px; color: var(--sm-text); line-height: 1; }
+  .ride ul { list-style: none; padding: 4px 0; }
+  .ride li a { display: flex; gap: 10px; align-items: center; padding: 8px 14px; text-decoration: none; color: inherit; }
+  .ride li a:hover { background: var(--sm-green-bg-1); }
+  .ride li .main { flex: 1; min-width: 0; }
+  .ride li .t { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ride li .s { font-size: 12px; color: var(--sm-text-secondary); }
+  .ride li .w { font-size: 12px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .ride li.done .t { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .src { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--sm-paper-p2); color: var(--sm-black-800); }
+  .ride .empty { padding: 14px; color: var(--sm-text-secondary); font-size: 13px; }
+
+  .lower { grid-column: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .box { padding: 14px 16px; }
+  .box h2 { font-size: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .line { display: flex; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--sm-border); font-size: 13px; }
+  .lamp { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--sm-text); flex: none; }
+  .lamp.ok { background: var(--sm-green-500); } .lamp.bad { background: var(--sm-red-700); }
+  .tick { width: 16px; height: 16px; border: 2px solid var(--sm-text); border-radius: 4px; flex: none; }
+  .tick.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .struck { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .muted { color: var(--sm-text-secondary); }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+
+<div class="toolbar chunk">
+  <img src="springmoney-logo-primary.svg" alt="Spring Money">
+  <div class="rating"><b>Park rating</b><div class="meter"><i id="meter"></i></div><span id="meter-text"></span></div>
+  <div class="sp"></div>
+  <div class="score"><b>00</b> clients · <b>₹0.0L</b> MRR <span class="check">CHECK</span><br>checked 6 Nov · refreshed 08:42</div>
+</div>
+
+<div class="park">
+  <div class="queue chunk">
+    <header><h2>Queue line</h2><span class="hint">Do next, in order</span></header>
+    <div class="path" id="queue"></div>
+  </div>
+
+  <div>
+    <div class="rides" id="rides"></div>
+    <div class="lower" style="margin-top:20px">
+      <div class="box chunk">
+        <h2>Maintenance log <span class="hint">last night's runs</span></h2>
+        <div id="runs"></div>
+      </div>
+      <div class="box chunk">
+        <h2>Notepad <span class="hint">+ add</span></h2>
+        <div id="mylist"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="round2-data.js"></script>
+<script>
+  // A small line-drawn ride for each panel, keyed by group.
+  const RIDE = {
+    followup: { name: "Ferris wheel", svg: '<circle cx="22" cy="18" r="13" fill="none" stroke="#006E4A" stroke-width="2.5"/><path d="M22 5v26M9 18h26M13 9l18 18M31 9L13 27" stroke="#006E4A" stroke-width="1.5"/><path d="M14 42l8-24 8 24" fill="none" stroke="#272B2A" stroke-width="2.5"/>' },
+    draft:    { name: "Roller coaster", svg: '<path d="M2 34c6-24 12-24 16-6s8 10 12-10 8-8 12 6" fill="none" stroke="#006E4A" stroke-width="3"/><path d="M8 40v-8M18 40v-12M28 40v-20M38 40v-10" stroke="#272B2A" stroke-width="2"/>' },
+    reminder: { name: "Carousel", svg: '<path d="M6 16L22 4l16 12z" fill="#B4E1D2" stroke="#272B2A" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 16v20M22 16v20M34 16v20" stroke="#006E4A" stroke-width="2"/><rect x="5" y="36" width="34" height="5" rx="2" fill="none" stroke="#272B2A" stroke-width="2.5"/>' },
+    social:   { name: "Drop tower", svg: '<rect x="18" y="2" width="8" height="40" rx="2" fill="none" stroke="#272B2A" stroke-width="2.5"/><rect x="12" y="14" width="20" height="8" rx="2" fill="#30AB84" stroke="#006E4A" stroke-width="2"/>' },
+    overdue:  { name: "Runaway train", svg: '<rect x="4" y="16" width="26" height="16" rx="3" fill="#FDECEA" stroke="#B42318" stroke-width="2.5"/><rect x="30" y="22" width="10" height="10" rx="2" fill="none" stroke="#B42318" stroke-width="2.5"/><circle cx="12" cy="36" r="4" fill="#272B2A"/><circle cx="26" cy="36" r="4" fill="#272B2A"/><path d="M8 10h6M4 6h8" stroke="#B42318" stroke-width="2"/>' },
+    today:    { name: "Ferris wheel", svg: '<circle cx="22" cy="18" r="13" fill="none" stroke="#006E4A" stroke-width="2.5"/><path d="M22 5v26M9 18h26M13 9l18 18M31 9L13 27" stroke="#006E4A" stroke-width="1.5"/><path d="M14 42l8-24 8 24" fill="none" stroke="#272B2A" stroke-width="2.5"/>' },
+    week:     { name: "Carousel", svg: '<path d="M6 16L22 4l16 12z" fill="#B4E1D2" stroke="#272B2A" stroke-width="2.5" stroke-linejoin="round"/><path d="M10 16v20M22 16v20M34 16v20" stroke="#006E4A" stroke-width="2"/><rect x="5" y="36" width="34" height="5" rx="2" fill="none" stroke="#272B2A" stroke-width="2.5"/>' },
+  };
+
+  function renderQueue() {
+    const open = ITEMS.filter(i => !i.done), done = ITEMS.filter(i => i.done);
+    document.getElementById("queue").innerHTML = [...open, ...done].map((i, n) => `
+      <a class="guest ${i.done ? "done" : n === 0 ? "now" : ""}" href="#">
+        <span class="num">${i.done ? "✓" : n + 1}</span>
+        ${n === 0 && !i.done ? '<div class="now-label">Now boarding</div>' : ""}
+        <div class="t">${i.title}</div>
+        <div class="s"><span class="src">${SOURCES[i.src].tag}</span> ${i.sub} · <span class="${i.due === "overdue" ? "late" : ""}">${i.when}</span></div>
+      </a>`).join("");
+  }
+
+  function renderRides(mode) {
+    const rides = Object.values(RIDE);
+    document.getElementById("rides").innerHTML = groupItems(mode).map((g, n) => {
+      const r = RIDE[g.key] || rides[n % 4], open = g.items.filter(i => !i.done).length;
+      const sub = g.from || r.name;
+      return `<div class="ride chunk">
+        <div class="head"><svg viewBox="0 0 44 44">${r.svg}</svg>
+          <div><h2>${g.label}</h2><div class="hint">${sub}</div></div>
+          <div class="q"><b>${open}</b>in queue</div></div>
+        <ul>${g.items.length ? g.items.map(i => `<li class="${i.done ? "done" : ""}"><a href="#">
+          <span class="src">${chip(i, mode)}</span>
+          <div class="main"><div class="t">${i.title}</div><div class="s">${i.sub}</div></div>
+          <span class="w ${i.due === "overdue" ? "late" : ""}">${i.when}</span></a></li>`).join("") : '<li class="empty">No riders. All clear.</li>'}</ul>
+      </div>`;
+    }).join("");
+  }
+
+  function renderSide() {
+    const p = progress();
+    document.getElementById("meter").style.width = p.pct + "%";
+    document.getElementById("meter-text").textContent = `${p.done} of ${p.total} done today`;
+    document.getElementById("runs").innerHTML = RUNS.map(r => `<div class="line"><span class="lamp ${r.ok ? "ok" : "bad"}"></span><b>${r.name}</b><span class="muted">${r.ok ? r.note : "Broken down: " + r.note}</span></div>`).join("");
+    document.getElementById("mylist").innerHTML = MY_LIST.map(t => `<div class="line"><span class="tick ${t.done ? "on" : ""}"></span><span class="${t.done ? "struck" : ""}">${t.text}</span></div>`).join("");
+  }
+
+  onGroupChange(renderRides);
+  renderQueue(); renderSide(); renderRides(getMode());
+</script>
+</body>
+</html>

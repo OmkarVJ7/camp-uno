@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option C · Focus queue</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:wght@500;600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--sm-paper); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.5; }
+  .sample { background: var(--sm-amber-300); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; }
+  .wrap { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 26px); }
+  main { padding: 36px 56px; }
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; }
+  .top img { height: 24px; }
+  .meta { font-size: 13px; color: var(--sm-text-secondary); }
+  h1 { font-family: var(--sm-font-serif); font-weight: 500; font-size: 40px; letter-spacing: -.02em; line-height: 1.15; }
+  .lede { color: var(--sm-text-secondary); font-size: 17px; margin: 8px 0 28px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tab { font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--sm-border); color: var(--sm-text-secondary); }
+  .tab.on { background: var(--sm-text); color: var(--sm-paper); border-color: var(--sm-text); }
+  .group { font-size: 12px; font-weight: 600; color: var(--sm-text-secondary); text-transform: uppercase; letter-spacing: .06em; margin: 22px 0 8px; }
+  .q { display: grid; grid-template-columns: 36px 1fr auto auto; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--sm-border); border-radius: 12px; margin-bottom: 8px; text-decoration: none; color: inherit; background: var(--sm-paper); }
+  .q:hover { border-color: var(--sm-green-500); background: var(--sm-green-bg-1); }
+  .q.first { border-left: 4px solid var(--sm-red-700); }
+  .ico { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .i-crm { background: var(--sm-green-bg-2); color: var(--sm-green-800); }
+  .i-mail { background: #FDECEA; color: var(--sm-red-700); }
+  .i-cal { background: var(--sm-blue-100); color: #1D4E9E; }
+  .i-soc { background: #FEF3C7; color: var(--sm-amber-700); }
+  .t { font-weight: 600; font-size: 15px; } .s { color: var(--sm-text-secondary); font-size: 13px; }
+  .when { font-size: 13px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .late { color: var(--sm-red-700); font-weight: 600; }
+  .act { font-size: 13px; font-weight: 600; color: var(--sm-link); white-space: nowrap; }
+  aside { background: var(--sm-paper-g); border-left: 1px solid var(--sm-border); padding: 36px 28px; }
+  .panel { margin-bottom: 28px; }
+  .panel h3 { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .panel h3 span { font-weight: 400; color: var(--sm-text-secondary); font-size: 12px; }
+  .score { background: var(--sm-green-800); color: var(--sm-paper); border-radius: 12px; padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .score .n { font-size: 30px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .score .l { font-size: 12px; color: var(--sm-green-100); }
+  .score .f { grid-column: 1 / -1; font-size: 12px; color: var(--sm-green-100); border-top: 1px solid rgba(255,255,255,.2); padding-top: 8px; margin-top: 4px; }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 4px; vertical-align: middle; }
+  .li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sm-border); font-size: 13px; align-items: center; }
+  .li .grow { flex: 1; }
+  .pill { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+  .p-fill { background: var(--sm-paper-p2); color: var(--sm-black-800); } .p-ready { background: var(--sm-blue-100); color: #1D4E9E; } .p-pub { background: var(--sm-green-bg-2); color: var(--sm-green-800); }
+  .box { width: 16px; height: 16px; border: 1.5px solid var(--sm-border-input); border-radius: 4px; flex: none; }
+  .box.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .done { color: var(--sm-text-disabled); text-decoration: line-through; }
+  .ok { color: var(--sm-green-800); font-weight: 700; } .bad { color: var(--sm-red-700); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+<div class="wrap">
+  <main>
+    <div class="top"><img src="springmoney-logo-primary.svg" alt="Spring Money"><span class="meta">Monday, 9 November 2026 · refreshed 08:42</span></div>
+    <h1>Nine things need you today.</h1>
+    <p class="lede">Most urgent first. Each one opens where you act on it.</p>
+    <div class="tabs"><span class="tab on">All 9</span><span class="tab">Follow-ups 4</span><span class="tab">Drafts 3</span><span class="tab">Reminders 1</span><span class="tab">Social 1</span></div>
+
+    <div class="group">Overdue</div>
+    <a class="q first" href="#"><span class="ico i-crm">CRM</span><div><div class="t">Sample Wealth Partners</div><div class="s">Send the demo recap and pricing note · Contact name</div></div><span class="when late">2 days late</span><span class="act">Open lead →</span></a>
+    <a class="q" href="#"><span class="ico i-mail">MAIL</span><div><div class="t">Draft: Weekly update for Nikhil</div><div class="s">Waiting since Friday</div></div><span class="when late">3 days</span><span class="act">Open draft →</span></a>
+
+    <div class="group">Today</div>
+    <a class="q" href="#"><span class="ico i-cal">CAL</span><div><div class="t">Call with sample advisor</div><div class="s">From Frappe follow-up date</div></div><span class="when">15:00</span><span class="act">Open lead →</span></a>
+    <a class="q" href="#"><span class="ico i-crm">CRM</span><div><div class="t">Example Capital Advisors</div><div class="s">Confirm Thursday call time · Contact name</div></div><span class="when">Today</span><span class="act">Open lead →</span></a>
+    <a class="q" href="#"><span class="ico i-mail">MAIL</span><div><div class="t">Draft: Following up on our conversation</div><div class="s">To contact@samplewealth.in</div></div><span class="when">2 days</span><span class="act">Open draft →</span></a>
+    <a class="q" href="#"><span class="ico i-soc">POST</span><div><div class="t">Thu · Instagram · Company</div><div class="s">To fill · no file yet</div></div><span class="when">Due Thu</span><span class="act">Open sheet →</span></a>
+  </main>
+
+  <aside>
+    <div class="panel">
+      <h3>Scoreboard <span>clients-and-revenue.md</span></h3>
+      <div class="score">
+        <div><div class="n">00</div><div class="l">Paying clients</div></div>
+        <div><div class="n">₹0.0L</div><div class="l">MRR <span class="check">CHECK</span></div></div>
+        <div class="f">Last checked 6 November 2026</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Social this week <span>08:41</span></h3>
+      <div class="li"><span class="grow">Tue · LinkedIn · Company</span><span class="pill p-ready">Ready</span></div>
+      <div class="li"><span class="grow">Thu · Instagram · Company</span><span class="pill p-fill">To fill</span></div>
+      <div class="li"><span class="grow">Mon · LinkedIn · Omkar</span><span class="pill p-pub">Published</span></div>
+    </div>
+    <div class="panel">
+      <h3>My list <span>+ Add</span></h3>
+      <div class="li"><span class="box"></span><span>Read the partner agreement draft</span></div>
+      <div class="li"><span class="box"></span><span>Homework: pricing page notes</span></div>
+      <div class="li"><span class="box on"></span><span class="done">Book travel for client visit</span></div>
+    </div>
+    <div class="panel">
+      <h3>Last night's runs</h3>
+      <div class="li"><span class="ok">✓</span><span>BD digest · 09:13</span></div>
+      <div class="li"><span class="ok">✓</span><span>Reminders · 3 created</span></div>
+      <div class="li"><span class="bad">!</span><span>Weekly update · no summary file</span></div>
+    </div>
+  </aside>
+</div>
+</body>
+</html>

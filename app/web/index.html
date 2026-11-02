@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Command Centre</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { display: grid; grid-template-columns: var(--nav-w, 232px) 1fr; transition: grid-template-columns var(--sm-duration-base) var(--sm-ease-standard); background: var(--sm-paper); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 13px; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+  nav { background: var(--sm-paper); border-right: 1px solid var(--sm-border); padding: 18px 14px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+  .brand img { width: 28px; height: 28px; }
+  .brand b { font-family: var(--sm-font-serif); font-weight: 600; font-size: 17px; white-space: nowrap; }
+  .collapse { margin-left: auto; border: 0; background: none; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); font-size: 16px; line-height: 1; flex: none; }
+  .collapse:hover { background: var(--sm-paper-p1); }
+  .sec h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--sm-text-secondary); padding: 0 6px 6px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--sm-paper-p1); border-radius: 8px; padding: 3px; }
+  .seg button { border: 0; background: none; font: 600 12px var(--sm-font-sans); padding: 6px 0; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); }
+  .seg button.on { background: var(--sm-paper); color: var(--sm-text); box-shadow: 0 1px 3px rgba(39,43,42,.15); }
+  .seg.four { grid-template-columns: repeat(4, 1fr); }
+  .now { font-size: 11px; color: var(--sm-text-secondary); padding: 6px 6px 0; }
+  .refresh { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid var(--sm-text); background: var(--sm-paper); color: var(--sm-text); border-radius: 8px; padding: 8px; font: 600 13px var(--sm-font-sans); cursor: pointer; }
+  .refresh:hover { background: var(--sm-green-bg-1); }
+  .refresh .ic { font-size: 15px; }
+  .refresh.busy .ic { animation: spin 1s linear infinite; }
+  .refresh.fresh { border-color: var(--sm-green-800); background: var(--sm-green-bg-2); }
+  .refresh.fresh .lbl::after { content: " · new data"; color: var(--sm-green-800); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+  .conn .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .conn .st { margin-left: auto; font-size: 11px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .d-ok { background: var(--sm-green-500); } .d-stale { background: var(--sm-amber-300); } .d-off { border: 1.5px solid var(--sm-black-400); } .d-err { background: var(--sm-red-700); }
+  .sec h4 { display: flex; align-items: center; justify-content: space-between; }
+  .info { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; background: none; color: var(--sm-text-secondary); font: italic 700 11px Georgia, serif; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .info:hover { color: var(--sm-green-800); }
+
+  dialog { margin: auto; border: 2px solid var(--sm-text); border-radius: 14px; box-shadow: 4px 4px 0 var(--sm-text); padding: 0; width: min(520px, 92vw); color: var(--sm-text); background: var(--sm-paper); font-family: var(--sm-font-sans); }
+  dialog::backdrop { background: rgba(10, 13, 12, .35); }
+  dialog header { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: var(--sm-green-800); color: var(--sm-paper); }
+  dialog header h3 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 18px; }
+  dialog header button { margin-left: auto; border: 0; background: rgba(255,255,255,.2); color: var(--sm-paper); width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 15px; }
+  dialog .body { padding: 14px 18px 18px; font-size: 13px; line-height: 1.55; max-height: 70vh; overflow-y: auto; }
+  dialog h5 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--sm-text-secondary); margin: 14px 0 6px; }
+  dialog h5:first-child { margin-top: 0; }
+  dialog ul, dialog ol { padding-left: 18px; }
+  dialog .area { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+  dialog .sw8 { width: 10px; height: 10px; border-radius: 3px; flex: none; transform: translateY(1px); }
+  dialog .tag { display: inline-block; font-size: 11px; background: var(--sm-paper-p2); border-radius: 4px; padding: 0 6px; margin: 2px 2px 0 0; }
+  dialog .note { font-size: 12px; color: var(--sm-text-secondary); margin-top: 14px; }
+  body.dark dialog { background: var(--sm-night-raised); color: var(--sm-paper); border-color: #000; box-shadow: 4px 4px 0 #000; }
+  body.dark dialog .tag { background: var(--sm-black-800); }
+  body.dark dialog h5, body.dark dialog .note { color: var(--sm-black-500); }
+
+  .foot { margin-top: auto; font-size: 11px; color: var(--sm-text-secondary); padding: 0 6px; line-height: 1.5; }
+
+  body.dark { background: var(--sm-night); color: var(--sm-paper); }
+  body.dark nav { background: var(--sm-night-raised); border-color: var(--sm-black-800); }
+  body.dark .seg { background: var(--sm-night); }
+  body.dark .seg button.on { background: var(--sm-black-800); color: var(--sm-paper); }
+  body.dark .sec h4, body.dark .conn .st, body.dark .foot, body.dark .now { color: var(--sm-black-500); }
+  body.dark .collapse:hover { background: var(--sm-night); }
+  body.dark .refresh { background: var(--sm-night-raised); color: var(--sm-paper); border-color: var(--sm-black-600); }
+  body.dark .refresh:hover { background: var(--sm-night); }
+
+  body.collapsed { --nav-w: 56px; }
+  body.collapsed nav { padding: 18px 8px; overflow: hidden; }
+  body.collapsed nav .sec, body.collapsed nav .foot, body.collapsed .brand b { display: none; }
+  body.collapsed .brand { flex-direction: column; gap: 12px; padding: 0; }
+  body.collapsed .collapse { margin-left: 0; transform: rotate(180deg); }
+  body.collapsed nav .sec.keep { display: block; }
+  body.collapsed .refresh { padding: 8px 0; }
+  body.collapsed .refresh .lbl, body.collapsed .sec.keep .now { display: none; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><img src="springmoney-mark.svg" alt=""><b>Command Centre</b><button class="collapse" id="collapse" title="Collapse menu" aria-label="Collapse menu">«</button></div>
+
+  <div class="sec keep">
+    <button class="refresh" id="refresh" title="Refresh now"><span class="ic">↻</span><span class="lbl">Refresh</span></button>
+    <div class="now" id="refreshed"></div>
+  </div>
+
+  <div class="sec">
+    <h4>Group by <button class="info" id="rules-btn" title="How items are sorted" aria-label="How items are sorted">i</button></h4>
+    <div class="seg" id="group">
+      <button data-g="area">Area</button><button data-g="source">Channel</button><button data-g="urgency">Urgency</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h4>Today's track</h4>
+    <div class="seg four" id="day">
+      <button data-d="auto" title="Everything due today">Auto</button><button data-d="10">10</button><button data-d="15">15</button><button data-d="20">20</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h4>Appearance</h4>
+    <div class="seg" id="appearance"><button data-a="auto">Auto</button><button data-a="light">Light</button><button data-a="dark">Dark</button></div>
+    <div class="now" id="now"></div>
+  </div>
+
+  <div class="sec">
+    <h4>Connections</h4>
+    <div id="conns"></div>
+  </div>
+
+  <div class="foot">Command Centre v0.1 · read-only.<br>Opens links; never sends or edits.</div>
+</nav>
+<iframe id="view" title="The Base" src="the-base.html"></iframe>
+<dialog id="rules"><header><h3>How items are sorted</h3><button data-close aria-label="Close">×</button></header><div class="body" id="rules-body"></div></dialog>
+
+<script src="helpers.js"></script>
+<script src="data.js"></script>
+<script>
+  const view = document.getElementById("view");
+
+  function load(key, fallback) {
+    try { return localStorage.getItem(key) || fallback; } catch (e) { return fallback; }
+  }
+  function save(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
+
+  const PHASE_NAMES = { morning: "Morning", day: "Day", evening: "Evening", night: "Night" };
+
+  // Morning until 11, day until 16:30, evening until 19:00, then night.
+  function clockPhase(d = new Date()) {
+    const h = d.getHours() + d.getMinutes() / 60;
+    return h >= 6 && h < 11 ? "morning" : h < 16.5 && h >= 11 ? "day" : h < 19 && h >= 16.5 ? "evening" : "night";
+  }
+
+  // Auto follows the clock and goes dark at night; Light and Dark are fixed.
+  function scene() {
+    const a = load("cc-appearance", "auto");
+    if (a === "light") return { phase: "day", dark: false, note: "Always daytime" };
+    if (a === "dark") return { phase: "night", dark: true, note: "Always night" };
+    const phase = clockPhase();
+    return { phase, dark: phase === "night", note: `Now: ${PHASE_NAMES[phase].toLowerCase()}, from the clock` };
+  }
+
+  function sendState() {
+    const s = scene();
+    view.contentWindow && view.contentWindow.postMessage({ group: load("cc-group", "area"), day: load("cc-day", "auto"), phase: s.phase, dark: s.dark }, "*");
+  }
+
+  const STATUS = {
+    ok: ["d-ok", s => "Updated " + hhmm(s.refreshedAt)],
+    stale: ["d-stale", s => "Stale · " + hhmm(s.refreshedAt)],
+    error: ["d-err", () => "Problem"],
+    not_connected: ["d-off", () => "Not connected"],
+  };
+
+  function renderConnections() {
+    document.getElementById("conns").innerHTML = META.sources.map(s => {
+      const [cls, text] = STATUS[s.status] || STATUS.not_connected;
+      return `<div class="conn"><span class="dot ${cls}"></span>${s.label}<span class="st">${text(s)}</span></div>`;
+    }).join("");
+    document.getElementById("refreshed").textContent = "Last refreshed " + hhmm(META.refreshedAt);
+  }
+
+  function render() {
+    const group = load("cc-group", "area"), appearance = load("cc-appearance", "auto"), s = scene();
+    document.querySelectorAll("[data-g]").forEach(b => b.classList.toggle("on", b.dataset.g === group));
+    document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("on", b.dataset.a === appearance));
+    document.querySelectorAll("[data-d]").forEach(b => b.classList.toggle("on", b.dataset.d === load("cc-day", "auto")));
+    document.body.classList.toggle("dark", s.dark);
+    document.getElementById("now").textContent = s.note;
+    sendState();
+  }
+
+  view.addEventListener("load", sendState);
+
+  document.getElementById("group").addEventListener("click", e => {
+    const b = e.target.closest("[data-g]");
+    if (b) { save("cc-group", b.dataset.g); render(); }
+  });
+  document.getElementById("day").addEventListener("click", e => {
+    const b = e.target.closest("[data-d]");
+    if (b) { save("cc-day", b.dataset.d); render(); }
+  });
+  document.getElementById("appearance").addEventListener("click", e => {
+    const b = e.target.closest("[data-a]");
+    if (b) { save("cc-appearance", b.dataset.a); render(); }
+  });
+
+  // Refresh gathers everything fresh right now, then reloads.
+  const refreshBtn = document.getElementById("refresh");
+  function refreshNow() {
+    refreshBtn.classList.add("busy");
+    refreshBtn.querySelector(".lbl").textContent = "Refreshing…";
+    fetch("/api/refresh", { method: "POST" }).finally(() => location.reload());
+  }
+  refreshBtn.addEventListener("click", refreshNow);
+  window.addEventListener("message", e => { if (e.data && e.data.refresh) refreshNow(); });
+
+  // The app gathers fresh data in the background. Just after opening, show it straight away;
+  // later on, only flag it, so a reload never interrupts what you're doing.
+  const openedAt = Date.now();
+  setInterval(() => {
+    fetch("/api/version").then(r => r.json()).then(({ version }) => {
+      if (version <= (META.version || 0)) return;
+      if (Date.now() - openedAt < 60000) location.reload();
+      else refreshBtn.classList.add("fresh");
+    }).catch(() => {});
+  }, 5000);
+
+  // The rules come with the data, so this always matches what the app is doing.
+  function renderRules() {
+    const r = RULES, tags = list => list.map(s => `<span class="tag">${s}</span>`).join(" ");
+    document.getElementById("rules-body").innerHTML = `
+      <h5>What comes in from Frappe</h5>
+      <p>Leads with a follow-up date ${r.window}. Leads in these stages are left out as closed: ${tags(r.skipped)}</p>
+      <h5>Which building each lead goes to</h5>
+      ${Object.entries(r.areas).map(([area, stages]) => `<div class="area"><span class="sw8" style="background:${AREAS[area].color}"></span>
+        <div><b>${AREAS[area].label}</b><br>${stages.map(s => `<span class="tag">${s.stage} → ${s.label}</span>`).join(" ")}</div></div>`).join("")}
+      <h5>What goes on the track</h5>
+      <p>Everything due today or overdue (backlog aside), so a light day makes a short track and a heavy day a long one.
+        The track always stays inside your base: on a heavy day the squares sit closer together and a little smaller.
+        "Today's track" in this menu can cap it at 10, 15 or 20; Auto takes everything (up to 40).
+        Tasks you add yourself always go on. Things due later in the week wait in their buildings.</p>
+      <p>Frappe leads go closest to a deal first:</p>
+      <ol>${r.order.map(s => `<li>${s}</li>`).join("")}</ol>
+      <p>Within the same stage, the most overdue comes first.</p>
+      <h5>Slack, Gmail, Calendar, Drive and the content calendar</h5>
+      <ul>${r.feeds.map(f => `<li>${f}</li>`).join("")}</ul>
+      <h5>Backlog</h5>
+      <p>Anything overdue by more than ${r.backlogDays} days stays off the track and out of the protests. Each building shows how many, with a link to them in Frappe.</p>
+      <p class="note">Want a rule changed? Ask Claude in a Command Centre session.</p>`;
+  }
+  const rules = document.getElementById("rules");
+  document.getElementById("rules-btn").addEventListener("click", () => rules.showModal());
+  rules.addEventListener("click", e => { if (e.target === rules || e.target.closest("[data-close]")) rules.close(); });
+
+  function applyNav() {
+    const collapsed = load("cc-nav", "open") === "collapsed";
+    document.body.classList.toggle("collapsed", collapsed);
+    const b = document.getElementById("collapse");
+    b.title = b.ariaLabel = collapsed ? "Expand menu" : "Collapse menu";
+  }
+  document.getElementById("collapse").addEventListener("click", () => {
+    save("cc-nav", load("cc-nav", "open") === "collapsed" ? "open" : "collapsed");
+    applyNav();
+  });
+
+  // Keep Auto in step with the clock, redrawing only when the time of day actually changes.
+  let lastPhase = scene().phase;
+  setInterval(() => { const p = scene().phase; if (p !== lastPhase) { lastPhase = p; render(); } }, 60000);
+
+  applyNav();
+  renderConnections();
+  renderRules();
+  render();
+</script>
+</body>
+</html>

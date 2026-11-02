@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option A · Morning brief</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--sm-paper-g); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 15px; line-height: 1.5; }
+  .sample { background: var(--sm-amber-300); color: var(--sm-black-900); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; letter-spacing: .02em; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 32px 40px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid var(--sm-border); }
+  header img { height: 26px; }
+  .meta { font-size: 13px; color: var(--sm-text-secondary); display: flex; gap: 16px; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sm-green-500); display: inline-block; margin-right: 6px; }
+  .hero { padding: 40px 0 32px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 48px; align-items: end; }
+  .hero h1 { font-family: var(--sm-font-serif); font-weight: 500; font-size: 48px; line-height: 1.1; letter-spacing: -.02em; }
+  .hero p { font-size: 18px; color: var(--sm-text-secondary); margin-top: 12px; max-width: 560px; }
+  .hero p b { color: var(--sm-text); font-weight: 600; }
+  .score { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--sm-border); border-radius: 12px; background: var(--sm-paper); }
+  .score div { padding: 18px 20px; }
+  .score div + div { border-left: 1px solid var(--sm-border); }
+  .score .n { font-size: 34px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .score .l { font-size: 13px; color: var(--sm-text-secondary); }
+  .score .foot { grid-column: 1 / -1; border-top: 1px solid var(--sm-border); border-left: 0 !important; font-size: 12px; color: var(--sm-text-secondary); padding: 10px 20px; }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-left: 6px; vertical-align: middle; }
+  .cols { display: grid; grid-template-columns: 1.5fr 1fr; gap: 48px; }
+  section { margin-bottom: 36px; }
+  h2 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 22px; display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 2px solid var(--sm-text); margin-bottom: 4px; }
+  h2 small { font-family: var(--sm-font-sans); font-weight: 400; font-size: 12px; color: var(--sm-text-secondary); }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--sm-border); text-decoration: none; color: inherit; }
+  .row:hover .t { color: var(--sm-link); }
+  .t { font-weight: 600; }
+  .s { color: var(--sm-text-secondary); font-size: 14px; }
+  .when { font-size: 13px; color: var(--sm-text-secondary); text-align: right; white-space: nowrap; }
+  .late { color: var(--sm-red-700); font-weight: 600; }
+  .go { color: var(--sm-link); font-weight: 600; font-size: 13px; }
+  .pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; }
+  .p-fill { background: var(--sm-paper-p2); color: var(--sm-black-800); }
+  .p-ready { background: var(--sm-blue-100); color: #1D4E9E; }
+  .p-pub { background: var(--sm-green-bg-2); color: var(--sm-green-800); }
+  .todo { display: flex; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--sm-border); align-items: flex-start; }
+  .box { width: 18px; height: 18px; border: 1.5px solid var(--sm-border-input); border-radius: 4px; flex: none; margin-top: 2px; }
+  .box.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .done { color: var(--sm-text-disabled); text-decoration: line-through; }
+  .add { color: var(--sm-text-secondary); font-size: 14px; padding: 11px 0; }
+  .run { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--sm-border); font-size: 14px; }
+  .ok { color: var(--sm-green-800); font-weight: 600; } .bad { color: var(--sm-red-700); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+<div class="page">
+  <header>
+    <img src="springmoney-logo-primary.svg" alt="Spring Money">
+    <div class="meta"><span><span class="dot"></span>All sources refreshed 08:42</span><span>Monday, 9 November 2026</span></div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1>Good morning, Omkar.</h1>
+      <p>You have <b>4 follow-ups due</b>, <b>3 drafts</b> waiting to send and <b>2 posts</b> to finish this week. Review block 5–7 pm.</p>
+    </div>
+    <div class="score">
+      <div><div class="n">00</div><div class="l">Paying clients</div></div>
+      <div><div class="n">₹0.0L<span class="check">CHECK</span></div><div class="l">MRR</div></div>
+      <div class="foot">From clients-and-revenue.md · last checked 6 November 2026</div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <section>
+        <h2>Today's follow-ups <small>Frappe · 08:42</small></h2>
+        <a class="row" href="#"><div><div class="t">Sample Wealth Partners</div><div class="s">Contact name · Send the demo recap and pricing note</div></div><div class="when"><span class="late">2 days late</span><br><span class="go">Open lead →</span></div></a>
+        <a class="row" href="#"><div><div class="t">Example Capital Advisors</div><div class="s">Contact name · Confirm Thursday call time</div></div><div class="when">Today<br><span class="go">Open lead →</span></div></a>
+        <a class="row" href="#"><div><div class="t">Placeholder Investments</div><div class="s">Contact name · Follow up on WhatsApp after email</div></div><div class="when">Today<br><span class="go">Open lead →</span></div></a>
+        <a class="row" href="#"><div><div class="t">Demo Financial Services</div><div class="s">Contact name · Share onboarding checklist</div></div><div class="when">Today<br><span class="go">Open lead →</span></div></a>
+      </section>
+      <section>
+        <h2>Drafts waiting for me <small>Gmail · 08:40</small></h2>
+        <a class="row" href="#"><div><div class="t">Following up on our conversation</div><div class="s">To contact@samplewealth.in</div></div><div class="when">2 days old<br><span class="go">Open draft →</span></div></a>
+        <a class="row" href="#"><div><div class="t">Weekly update for Nikhil</div><div class="s">To nikhil@…</div></div><div class="when">Since Friday<br><span class="go">Open draft →</span></div></a>
+        <a class="row" href="#"><div><div class="t">Intro: Spring Money for your practice</div><div class="s">To contact@example.in</div></div><div class="when">Today<br><span class="go">Open draft →</span></div></a>
+      </section>
+      <section>
+        <h2>Social this week <small>Content calendar · 08:41</small></h2>
+        <a class="row" href="#"><div><div class="t">Tue · LinkedIn · Company</div><div class="s">E:\Spring Money Product Videos\…\reel-01.mp4</div></div><div class="when"><span class="pill p-ready">Ready</span></div></a>
+        <a class="row" href="#"><div><div class="t">Thu · Instagram · Company</div><div class="s">No file yet</div></div><div class="when"><span class="pill p-fill">To fill</span></div></a>
+        <a class="row" href="#"><div><div class="t">Mon · LinkedIn · Omkar</div><div class="s">Published · view post</div></div><div class="when"><span class="pill p-pub">Published</span></div></a>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>Reminders <small>Next 7 days</small></h2>
+        <div class="row"><div><div class="t">Call with sample advisor</div><div class="s">From Frappe follow-up date</div></div><div class="when">Today 15:00</div></div>
+        <div class="row"><div><div class="t">Friday weekly update</div><div class="s">Scheduled reminder</div></div><div class="when">Fri 16:03</div></div>
+        <div class="row"><div><div class="t">Renewal conversation</div><div class="s">From Frappe follow-up date</div></div><div class="when">Sat</div></div>
+      </section>
+      <section>
+        <h2>My list <small>Saved on this PC</small></h2>
+        <div class="todo"><span class="box"></span><span>Read the partner agreement draft</span></div>
+        <div class="todo"><span class="box"></span><span>Homework: pricing page notes</span></div>
+        <div class="todo"><span class="box on"></span><span class="done">Book travel for client visit</span></div>
+        <div class="add">+ Add a task</div>
+      </section>
+      <section>
+        <h2>Last night's runs</h2>
+        <div class="run"><span class="ok">✓</span><span>09:13 BD digest · sent to Slack DM</span></div>
+        <div class="run"><span class="ok">✓</span><span>Reminders · 3 created</span></div>
+        <div class="run"><span class="bad">!</span><span>Weekly update · no summary file found</span></div>
+      </section>
+    </div>
+  </div>
+</div>
+</body>
+</html>

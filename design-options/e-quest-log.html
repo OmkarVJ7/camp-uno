@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Option E · Quest log</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600&display=swap">
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--sm-paper-g); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 14px; line-height: 1.45; }
+  .sample { background: var(--sm-amber-300); text-align: center; font-size: 12px; font-weight: 600; padding: 4px; }
+  .top { display: flex; align-items: center; gap: 20px; padding: 14px 28px; border-bottom: 1px solid var(--sm-border); background: var(--sm-paper); }
+  .top img { height: 22px; }
+  .top .sp { flex: 1; }
+  .meta { font-size: 13px; color: var(--sm-text-secondary); }
+  .switch { display: flex; background: var(--sm-paper-p1); border-radius: 10px; padding: 3px; }
+  .switch button { border: 0; background: none; font: 600 12px var(--sm-font-sans); padding: 6px 12px; border-radius: 8px; cursor: pointer; color: var(--sm-text-secondary); }
+  .switch button.on { background: var(--sm-paper); color: var(--sm-text); box-shadow: 0 1px 3px rgba(39,43,42,.15); }
+
+  .grid { display: grid; grid-template-columns: 290px 1fr 1fr; gap: 20px; padding: 20px 28px; align-items: start; }
+  .card { background: var(--sm-paper); border: 1px solid var(--sm-border); border-radius: 16px; padding: 18px; }
+  .card + .card { margin-top: 20px; }
+  h2 { font-family: var(--sm-font-serif); font-weight: 600; font-size: 19px; }
+  h3 { font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  h3 span { font-weight: 400; font-size: 12px; color: var(--sm-text-secondary); }
+  .hint { font-size: 12px; color: var(--sm-text-secondary); }
+
+  /* Character card */
+  .hero { background: var(--sm-night); color: var(--sm-paper); border: 0; }
+  .who { display: flex; gap: 14px; align-items: center; }
+  .ring { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .ring div { width: 52px; height: 52px; border-radius: 50%; background: var(--sm-night-raised); display: grid; place-items: center; font-family: var(--sm-font-serif); font-weight: 600; font-size: 20px; }
+  .who .lvl { font-size: 12px; color: var(--sm-green-300); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .who .nm { font-family: var(--sm-font-serif); font-size: 20px; font-weight: 600; }
+  .xp { margin: 16px 0 4px; height: 8px; border-radius: 999px; background: var(--sm-black-800); overflow: hidden; }
+  .xp i { display: block; height: 100%; background: var(--sm-green-400); }
+  .xpt { font-size: 12px; color: var(--sm-black-500); display: flex; justify-content: space-between; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat { background: var(--sm-night-raised); border-radius: 10px; padding: 10px 12px; }
+  .stat b { font-size: 20px; display: block; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 11px; color: var(--sm-black-500); }
+  .badges { display: flex; gap: 8px; margin-top: 14px; }
+  .badge { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--sm-night-raised); border: 1px solid var(--sm-black-800); font-size: 16px; }
+  .badge.lock { opacity: .35; }
+  .treasury { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--sm-black-800); font-size: 12px; color: var(--sm-black-500); }
+  .treasury b { color: var(--sm-paper); }
+  .check { background: #FEF3C7; color: var(--sm-amber-700); font-size: 10px; font-weight: 700; padding: 0 4px; border-radius: 3px; }
+
+  .line { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--sm-border); font-size: 13px; }
+  .tick { width: 16px; height: 16px; border: 1.5px solid var(--sm-border-input); border-radius: 4px; flex: none; }
+  .tick.on { background: var(--sm-green-800); border-color: var(--sm-green-800); }
+  .struck { text-decoration: line-through; color: var(--sm-text-disabled); }
+  .ok { color: var(--sm-green-800); font-weight: 700; } .bad { color: var(--sm-red-700); font-weight: 700; }
+  .muted { color: var(--sm-text-secondary); }
+
+  /* Quest chain */
+  .chain-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .quest { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--sm-border); text-decoration: none; color: inherit; }
+  .quest .n { width: 28px; height: 28px; border-radius: 8px; background: var(--sm-paper-p1); display: grid; place-items: center; font-weight: 700; font-size: 12px; color: var(--sm-text-secondary); }
+  .quest .t { font-weight: 600; }
+  .quest .s { font-size: 12px; color: var(--sm-text-secondary); }
+  .quest .r { text-align: right; font-size: 12px; white-space: nowrap; }
+  .xpchip { display: inline-block; font-size: 11px; font-weight: 700; color: var(--sm-green-800); background: var(--sm-green-bg-2); border-radius: 999px; padding: 1px 8px; margin-bottom: 3px; }
+  .quest.main { background: var(--sm-green-bg-1); border: 1.5px solid var(--sm-green-500); border-radius: 12px; padding: 14px 12px; margin-bottom: 6px; }
+  .quest.main .n { background: var(--sm-green-800); color: var(--sm-paper); }
+  .quest.main .t { font-size: 16px; }
+  .quest .tagline { font-size: 11px; font-weight: 700; color: var(--sm-green-800); text-transform: uppercase; letter-spacing: .05em; }
+  .quest.done { opacity: .5; } .quest.done .t { text-decoration: line-through; }
+  .quest.done .n { background: var(--sm-green-100); color: var(--sm-green-900); }
+  .late { color: var(--sm-red-700); font-weight: 600; }
+  .src { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--sm-paper-p2); color: var(--sm-black-800); margin-right: 4px; }
+
+  /* Quest boards */
+  .board { padding: 14px 16px; }
+  .board + .board { margin-top: 14px; }
+  .board header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .board header .cnt { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--sm-text-secondary); }
+  .pips { display: flex; gap: 3px; margin-bottom: 8px; }
+  .pips i { height: 5px; flex: 1; border-radius: 3px; background: var(--sm-paper-p2); }
+  .pips i.on { background: var(--sm-green-500); }
+  .bi { display: flex; gap: 8px; padding: 6px 0; font-size: 13px; border-top: 1px solid var(--sm-paper-p2); text-decoration: none; color: inherit; }
+  .bi .main { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bi .w { color: var(--sm-text-secondary); font-size: 12px; white-space: nowrap; }
+  .bi.done .main { text-decoration: line-through; color: var(--sm-text-disabled); }
+</style>
+</head>
+<body>
+<div class="sample">MOCK-UP · SAMPLE DATA FOR LAYOUT ONLY · NOT REAL LEADS OR NUMBERS</div>
+<div class="top">
+  <img src="springmoney-logo-primary.svg" alt="Spring Money">
+  <div class="sp"></div>
+  <span class="meta">Monday, 9 November · refreshed 08:42</span>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="card hero">
+      <div class="who">
+        <div class="ring" id="ring"><div>OJ</div></div>
+        <div><div class="lvl">Level 7 · Dealmaker</div><div class="nm">Omkar</div></div>
+      </div>
+      <div class="xp"><i id="xpbar"></i></div>
+      <div class="xpt"><span id="xptext"></span><span>Next level 400</span></div>
+      <div class="stats">
+        <div class="stat"><b>4</b><span>day streak</span></div>
+        <div class="stat"><b id="done-count"></b><span>quests done today</span></div>
+      </div>
+      <div class="badges" title="Achievements">
+        <div class="badge" title="Inbox zero">✉</div>
+        <div class="badge" title="5 follow-ups in a day">★</div>
+        <div class="badge" title="Posted every day this week">▶</div>
+        <div class="badge lock" title="Locked: 10-day streak">🔒</div>
+      </div>
+      <div class="treasury"><b>00</b> clients · <b>₹0.0L</b> MRR <span class="check">CHECK</span> · checked 6 Nov</div>
+    </div>
+    <div class="card">
+      <h3>Side quests <span>my list · + add</span></h3>
+      <div id="mylist"></div>
+    </div>
+    <div class="card">
+      <h3>Night watch <span>last night's runs</span></h3>
+      <div id="runs"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chain-head"><h2>Today's quests</h2><span class="hint">In order. Finish one, the next unlocks.</span></div>
+    <div id="chain"></div>
+  </div>
+
+  <div id="boards"></div>
+</div>
+
+<script src="round2-data.js"></script>
+<script>
+  const XP = { overdue: 30, today: 20, week: 10 };
+
+  function renderHero() {
+    const earned = ITEMS.filter(i => i.done).reduce((s, i) => s + XP[i.due], 0) + 280;
+    document.getElementById("xpbar").style.width = Math.round(100 * earned / 400) + "%";
+    document.getElementById("xptext").textContent = earned + " XP";
+    document.getElementById("ring").style.background = `conic-gradient(#30AB84 ${progress().pct}%, #494D4C 0)`;
+    document.getElementById("done-count").textContent = `${progress().done} / ${progress().total}`;
+    document.getElementById("mylist").innerHTML = MY_LIST.map(t => `<div class="line"><span class="tick ${t.done ? "on" : ""}"></span><span class="${t.done ? "struck" : ""}">${t.text}</span></div>`).join("");
+    document.getElementById("runs").innerHTML = RUNS.map(r => `<div class="line"><span class="${r.ok ? "ok" : "bad"}">${r.ok ? "✓" : "!"}</span><b>${r.name}</b><span class="muted">${r.note}</span></div>`).join("");
+  }
+
+  function renderChain() {
+    const open = ITEMS.filter(i => !i.done), done = ITEMS.filter(i => i.done);
+    document.getElementById("chain").innerHTML = [...open, ...done].map((i, n) => {
+      const main = n === 0 && !i.done;
+      return `<a class="quest ${main ? "main" : ""} ${i.done ? "done" : ""}" href="#">
+        <span class="n">${i.done ? "✓" : n + 1}</span>
+        <div>${main ? '<div class="tagline">Main quest</div>' : ""}
+          <div class="t">${i.title}</div>
+          <div class="s"><span class="src">${SOURCES[i.src].tag}</span>${i.sub}</div></div>
+        <div class="r"><span class="xpchip">+${XP[i.due]} XP</span><br><span class="${i.due === "overdue" ? "late" : "muted"}">${i.when}</span></div>
+      </a>`;
+    }).join("");
+  }
+
+  function renderBoards(mode) {
+    document.getElementById("boards").innerHTML = groupItems(mode).map(g => {
+      const done = g.items.filter(i => i.done).length;
+      const sub = g.from || g.items.length + " quests";
+      return `<div class="card board">
+        <header><h2 style="font-size:16px">${g.label}</h2><span class="cnt">${done}/${g.items.length}</span></header>
+        <div class="hint" style="margin-bottom:6px">${sub}</div>
+        <div class="pips">${g.items.map(i => `<i class="${i.done ? "on" : ""}"></i>`).join("")}</div>
+        ${g.items.map(i => `<a class="bi ${i.done ? "done" : ""}" href="#"><span class="src">${chip(i, mode)}</span><span class="main">${i.title}</span><span class="w ${i.due === "overdue" ? "late" : ""}">${i.when}</span></a>`).join("")}
+      </div>`;
+    }).join("");
+  }
+
+  onGroupChange(renderBoards);
+  renderHero(); renderChain(); renderBoards(getMode());
+</script>
+</body>
+</html>
