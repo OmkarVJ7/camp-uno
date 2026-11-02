@@ -8,13 +8,13 @@
 <style>
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
-  body { display: grid; grid-template-columns: var(--nav-w, 232px) 1fr; transition: grid-template-columns var(--sm-duration-base) var(--sm-ease-standard); background: var(--sm-paper); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 13px; }
+  body { display: grid; grid-template-columns: var(--nav-w, 244px) 1fr; transition: grid-template-columns var(--sm-duration-base) var(--sm-ease-standard); background: var(--sm-paper); color: var(--sm-text); font-family: var(--sm-font-sans); font-size: 13px; }
   iframe { display: block; width: 100%; height: 100%; border: 0; }
 
-  nav { background: var(--sm-paper); border-right: 1px solid var(--sm-border); padding: 18px 14px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+  nav { background: var(--sm-paper); border-right: 1px solid var(--sm-border); padding: 18px 14px; display: flex; flex-direction: column; gap: 22px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 0 2px 0 6px; }
   .brand img { width: 28px; height: 28px; }
-  .brand b { font-family: var(--sm-font-serif); font-weight: 600; font-size: 17px; white-space: nowrap; }
+  .brand b { font-family: var(--sm-font-serif); font-weight: 600; font-size: 16px; white-space: nowrap; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .collapse { margin-left: auto; border: 0; background: none; width: 26px; height: 26px; border-radius: 6px; cursor: pointer; color: var(--sm-text-secondary); font-size: 16px; line-height: 1; flex: none; }
   .collapse:hover { background: var(--sm-paper-p1); }
   .sec h4 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--sm-text-secondary); padding: 0 6px 6px; }
@@ -30,9 +30,19 @@
   .refresh.fresh { border-color: var(--sm-green-800); background: var(--sm-green-bg-2); }
   .refresh.fresh .lbl::after { content: " · new data"; color: var(--sm-green-800); }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .conn { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+  .conn { display: flex; align-items: center; gap: 10px; padding: 5px 8px; min-width: 0; border-radius: 6px; }
+  .conn:hover { background: var(--sm-paper-p1); }
   .conn .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-  .conn .st { margin-left: auto; font-size: 11px; color: var(--sm-text-secondary); white-space: nowrap; }
+  .conn .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .conn .st { font-size: 10px; color: var(--sm-text-secondary); white-space: nowrap; }
+  /* Update times show on hover, or always with the clock toggle. Problems always show. */
+  .conn.s-ok .st, .conn.s-not_connected .st { display: none; }
+  .conn:hover .st, body.conn-times .conn .st { display: inline; }
+  .conn.s-stale .st { color: var(--sm-amber-700); font-weight: 600; }
+  .conn.s-error .st { color: var(--sm-red-700); font-weight: 600; }
+  .times { border: 0; background: none; color: var(--sm-text-secondary); cursor: pointer; font-size: 13px; padding: 0 2px; line-height: 1; }
+  body.conn-times .times { color: var(--sm-green-800); }
+  body.dark .conn:hover { background: var(--sm-night); }
   .d-ok { background: var(--sm-green-500); } .d-stale { background: var(--sm-amber-300); } .d-off { border: 1.5px solid var(--sm-black-400); } .d-err { background: var(--sm-red-700); }
   .sec h4 { display: flex; align-items: center; justify-content: space-between; }
   .info { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid currentColor; background: none; color: var(--sm-text-secondary); font: italic 700 11px Georgia, serif; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; }
@@ -54,6 +64,12 @@
   body.dark dialog { background: var(--sm-night-raised); color: var(--sm-paper); border-color: #000; box-shadow: 4px 4px 0 #000; }
   body.dark dialog .tag { background: var(--sm-black-800); }
   body.dark dialog h5, body.dark dialog .note { color: var(--sm-black-500); }
+  .nt { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--sm-border); }
+  .nt .tm { font-size: 11px; color: var(--sm-text-secondary); white-space: nowrap; min-width: 38px; }
+  .nt .tx { flex: 1; }
+  .nt .del { border: 0; background: none; color: var(--sm-text-secondary); cursor: pointer; font: 600 11px var(--sm-font-sans); padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+  .nt .del:hover, .nt .del.sure { color: var(--sm-paper); background: var(--sm-red-700); }
+  body.dark .nt { border-color: var(--sm-black-800); }
 
   .fb { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; }
   .fb textarea { resize: vertical; min-height: 44px; border: 1.5px solid var(--sm-border); border-radius: 8px; padding: 6px 8px; font: 12px var(--sm-font-sans); background: var(--sm-paper); color: var(--sm-text); }
@@ -113,12 +129,12 @@
   </div>
 
   <div class="sec">
-    <h4>Connections</h4>
+    <h4>Connections <button class="times" id="times" title="Always show update times" aria-label="Always show update times">◷</button></h4>
     <div id="conns"></div>
   </div>
 
   <div class="sec">
-    <h4>Feedback <span class="now" id="fb-count" style="padding:0"></span></h4>
+    <h4><span>Feedback <span class="now" id="fb-count" style="padding:0"></span></span><button class="times" id="notes-btn" title="See saved notes" aria-label="See saved notes">☰</button></h4>
     <form id="fb" class="fb">
       <textarea name="t" rows="2" placeholder="Anything that felt wrong, or that you wanted here…"></textarea>
       <button class="fb-save">Save note</button>
@@ -128,6 +144,7 @@
   <div class="foot">Command Centre v0.1 · read-only.<br>Opens links; never sends or edits.</div>
 </nav>
 <iframe id="view" title="The Base" src="the-base.html"></iframe>
+<dialog id="notes"><header><h3>Your feedback notes</h3><button data-close aria-label="Close">×</button></header><div class="body" id="notes-body"></div></dialog>
 <dialog id="rules"><header><h3>How items are sorted</h3><button data-close aria-label="Close">×</button></header><div class="body" id="rules-body"></div></dialog>
 
 <script src="helpers.js"></script>
@@ -175,7 +192,7 @@
   function renderConnections() {
     document.getElementById("conns").innerHTML = META.sources.map(s => {
       const [cls, text] = STATUS[s.status] || STATUS.not_connected;
-      return `<div class="conn"><span class="dot ${cls}"></span>${s.label}<span class="st">${text(s)}</span></div>`;
+      return `<div class="conn s-${s.status}" title="${s.note || ""}"><span class="dot ${cls}"></span><span class="nm">${s.label}</span><span class="st">${text(s)}</span></div>`;
     }).join("");
     document.getElementById("refreshed").textContent = "Last refreshed " + hhmm(META.refreshedAt);
   }
@@ -253,6 +270,14 @@
   document.getElementById("rules-btn").addEventListener("click", () => rules.showModal());
   rules.addEventListener("click", e => { if (e.target === rules || e.target.closest("[data-close]")) rules.close(); });
 
+  // Clock toggle beside "Connections": show update times always, or only on hover.
+  const applyTimes = () => document.body.classList.toggle("conn-times", load("cc-times", "hover") === "always");
+  document.getElementById("times").addEventListener("click", () => {
+    save("cc-times", load("cc-times", "hover") === "always" ? "hover" : "always");
+    applyTimes();
+  });
+  applyTimes();
+
   // Feedback notes for the sign-off review, saved to data\feedback.md.
   const fb = document.getElementById("fb");
   const showCount = n => document.getElementById("fb-count").textContent = n ? `· ${n} saved` : "";
@@ -269,6 +294,33 @@
         fb.classList.add("saved");
         setTimeout(() => { fb.querySelector("button").textContent = "Save note"; fb.classList.remove("saved"); }, 1800);
       }).catch(() => { fb.querySelector("button").textContent = "Couldn't save"; });
+  });
+
+  // Saved notes, newest first and grouped by day. Delete asks "Sure?" on the first click.
+  const notesDlg = document.getElementById("notes");
+  function renderNotes(notes) {
+    showCount(notes.length);
+    if (!notes.length) { document.getElementById("notes-body").innerHTML = '<p class="note">No notes yet. Use the box in the menu whenever something strikes you.</p>'; return; }
+    let html = "", day = "";
+    [...notes].reverse().forEach(n => {
+      const [d, t] = n.when.split(", ");
+      if (d !== day) { day = d; html += `<h5>${esc(d)}</h5>`; }
+      html += `<div class="nt"><span class="tm">${esc(t || "")}</span><span class="tx">${esc(n.text)}</span>
+        <button class="del" data-line="${n.line}" data-text="${esc(n.text)}">Delete</button></div>`;
+    });
+    document.getElementById("notes-body").innerHTML = html + '<p class="note">Saved in D:\\command-centre\\data\\feedback.md</p>';
+  }
+  document.getElementById("notes-btn").addEventListener("click", () => {
+    fetch("/api/feedback").then(r => r.json()).then(d => { renderNotes(d.notes); notesDlg.showModal(); });
+  });
+  notesDlg.addEventListener("click", e => {
+    if (e.target === notesDlg || e.target.closest("[data-close]")) { notesDlg.close(); return; }
+    const b = e.target.closest(".del");
+    if (!b) return;
+    if (!b.classList.contains("sure")) { b.classList.add("sure"); b.textContent = "Sure?"; return; }
+    fetch("/api/feedback/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ line: +b.dataset.line, text: b.dataset.text }) })
+      .then(r => r.ok ? r.json() : fetch("/api/feedback").then(x => x.json()))
+      .then(d => renderNotes(d.notes));
   });
 
   // When the date changes with the app left open, gather fresh data and reload,

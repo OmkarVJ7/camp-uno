@@ -350,10 +350,33 @@ def add_feedback(text):
         f.write(f"- **{datetime.now():%a %d %b, %H:%M}** · {text}\n")
 
 
-def feedback_count():
+NOTE_LINE = re.compile(r"^- \*\*(.+?)\*\* · (.*)$")
+
+
+def read_feedback():
+    """The saved notes, oldest first, each with its line number in the file (used to delete it)."""
     if not FEEDBACK_FILE.exists():
-        return 0
-    return sum(1 for line in FEEDBACK_FILE.read_text(encoding="utf-8").splitlines() if line.startswith("- **"))
+        return []
+    notes = []
+    for n, line in enumerate(FEEDBACK_FILE.read_text(encoding="utf-8").splitlines()):
+        m = NOTE_LINE.match(line)
+        if m:
+            notes.append({"line": n, "when": m.group(1), "text": m.group(2)})
+    return notes
+
+
+def feedback_count():
+    return len(read_feedback())
+
+
+def delete_feedback(line, text):
+    """Removes one note. The text must still match, so a stale screen can't delete the wrong note."""
+    lines = FEEDBACK_FILE.read_text(encoding="utf-8").splitlines()
+    m = NOTE_LINE.match(lines[line]) if 0 <= line < len(lines) else None
+    if not m or m.group(2) != text:
+        raise ValueError("that note has changed; reopen the list")
+    del lines[line]
+    write_atomic(FEEDBACK_FILE, "\n".join(lines) + "\n")
 
 
 def frappe_rules():

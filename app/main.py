@@ -106,7 +106,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_body(200, json.dumps({"version": version}), "application/json")
             return
         if path == "/api/feedback":
-            self.send_body(200, json.dumps({"count": collectors.feedback_count()}), "application/json")
+            notes = collectors.read_feedback()
+            self.send_body(200, json.dumps({"count": len(notes), "notes": notes}, ensure_ascii=False), "application/json")
             return
         super().do_GET()
 
@@ -124,13 +125,17 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_response(500)
             self.end_headers()
             return
-        if self.path == "/api/feedback":
-            # A note from the test run, appended to data\feedback.md.
+        if self.path in ("/api/feedback", "/api/feedback/delete"):
+            # Notes from the test run, kept in data\feedback.md: add one, or delete one.
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-                collectors.add_feedback(body.get("text", ""))
-                self.send_body(200, json.dumps({"count": collectors.feedback_count()}), "application/json")
-            except (ValueError, TypeError, AttributeError, OSError):
+                if self.path == "/api/feedback":
+                    collectors.add_feedback(body.get("text", ""))
+                else:
+                    collectors.delete_feedback(int(body["line"]), body["text"])
+                notes = collectors.read_feedback()
+                self.send_body(200, json.dumps({"count": len(notes), "notes": notes}, ensure_ascii=False), "application/json")
+            except (ValueError, TypeError, KeyError, AttributeError, IndexError, OSError):
                 self.send_response(400)
                 self.end_headers()
             return
@@ -185,7 +190,18 @@ PORT_TAKEN = f"""<body style="font-family:Segoe UI,sans-serif;padding:40px;color
 <p>Close that program (or restart the PC) and open the Command Centre again.</p></body>"""
 
 
+def own_taskbar_identity():
+    """Without this, Windows files the window under Python in the taskbar and shows Python's icon.
+    Giving the process its own app ID makes the taskbar use the window's (Spring Money) icon."""
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("SpringMoney.CampUno")
+    except Exception:
+        pass
+
+
 def main():
+    own_taskbar_identity()
     DATA.mkdir(exist_ok=True)
     try:
         server = ThreadingHTTPServer(("127.0.0.1", PORT), partial(Handler, directory=str(WEB)))
