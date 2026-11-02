@@ -278,13 +278,14 @@
   // None sits in front of the pitch, so nothing hides a task.
   // [x, y, width, depth]. Club offices and Ciutat Esportiva run the length of the back stand;
   // La Masia and Palau stand together on the left side.
-  const BUILDING_SLOTS = [[10.1, -.4, 4.7, 2.4], [4.8, -.2, 4.6, 2.1], [.4, 3.5, 2, 2], [.4, 6.6, 2, 2], [16, 5.2, 2, 2], [5.6, 13.6, 2, 2], [.4, 9.7, 2, 2]];
+  // They stand back from the stands, leaving a wide concourse where the crowds gather.
+  const BUILDING_SLOTS = [[10.1, -1.4, 4.7, 2.4], [4.8, -1.2, 4.6, 2.1], [-.6, 3.5, 2, 2], [-.6, 6.6, 2, 2], [16.8, 5.2, 2, 2], [5.6, 13.8, 2, 2], [-.6, 9.7, 2, 2]];
   const STYLES = ["training", "office", "masia", "arena", "museum", "fanzone", "house"];
   const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "Manager's house" };
   const NOTICE_BOARD = [1.4, 12.4], WATCHTOWER = [17, 13.6];
   // Nothing stands between you and the big screen (above the back stand, x 8 to 11.4).
   const LAMPS = [[3.3, 4.6], [15.2, 8], [15.2, 12.6], [9.5, 12.6], [4, 12.6], [3.3, 8]];
-  const TREES = [[1, 2.4], [16, 1.4], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [8, 15.2], [3.4, 14.6], [.6, 12], [2.6, 6], [2.6, 9.2], [17.6, 15]];
+  const TREES = [[1, 2.4], [16, 1.4], [17.4, 3.4], [17.4, 8.6], [17.6, 10.6], [8, 15.2], [3.4, 14.6], [.6, 12], [17.6, 15]];
 
   // How the base looks at each time of day.
   const PHASES = {
@@ -815,11 +816,20 @@
   const FLOODLIGHTS = [[3.3, 2.8], [14.8, 3.2], [4, 12.5], [16.8, 10.8]];
   function floodlight(x, y) {
     const [bx, by] = iso(x, y), top = by - 128, lit = PHASES[phase].lit;
-    // The front-right mast (the one nearest you) faces away, towards the pitch: you see the backs of
-    // its lamps, with just a rim of light round the edge. The side masts face the pitch side-on.
-    // The others face you: four lamps, each with its own glow, plus a soft halo round the head.
-    // A mast faces the centre spot; it points away from you only when it's well in front of the pitch.
-    const away = (CENTRE[0] - x) + (CENTRE[1] - y) < -2, lamps = [0, 1, 2, 3].map(i => bx - 11 + i * 7.3);
+    // Every mast points at the centre spot. How much of that points towards you decides what you see:
+    // the mast in front of the pitch shows the backs of its lamps (just a rim of light), the masts at
+    // the sides are seen side-on with the light spilling towards the pitch, and the far one faces you.
+    const toward = (CENTRE[0] - x) + (CENTRE[1] - y), away = toward < -2;
+    if (Math.abs(toward) <= 2) {
+      const dir = Math.sign((CENTRE[0] - x) - (CENTRE[1] - y)) || 1;   // which way the pitch is on screen
+      const face = dir < 0 ? bx - 6 : bx + 4;
+      if (lit) lights.push(`<rect x="${face}" y="${top - 12}" width="2" height="16" rx="1" fill="#FFF4C2"/>` +
+        `<ellipse cx="${bx + dir * 20}" cy="${top - 2}" rx="20" ry="13" fill="url(#bulb)" opacity=".7"/>`);
+      return `<rect x="${bx - 2}" y="${top}" width="4" height="128" fill="#686D6C"/>
+        <rect x="${bx - 4}" y="${top - 13}" width="8" height="18" rx="2" fill="#272B2A"/>
+        <rect x="${face}" y="${top - 12}" width="2" height="16" rx="1" fill="${lit ? "#FFF4C2" : "#C4C9C8"}"/>`;
+    }
+    const lamps = [0, 1, 2, 3].map(i => bx - 11 + i * 7.3);
     if (lit) lights.push(away
       ? `<rect x="${bx - 17}" y="${top - 13}" width="34" height="2.5" rx="1" fill="#FFF4C2" opacity=".8"/>`
       : `<circle cx="${bx}" cy="${top - 5}" r="26" fill="url(#bulb)" opacity=".55"/>` + lamps.map(lx => `<circle cx="${lx}" cy="${top - 5}" r="9" fill="url(#bulb)"/>`).join(""));
@@ -892,13 +902,13 @@
     }
     for (let i = 0; i < 420; i++) {
       const x = -E + r() * (GW + 2 * E), y = -E + r() * (GD + 2 * E);
-      if (onRoad(x, y) || (x > 3 && x < 16 && y > 2.6 && y < 13.4)) continue;
+      if (onRoad(x, y) || (x > 1.6 && x < 16.6 && y > 1.2 && y < 13.4)) continue;
       const [gx, gy] = iso(x, y);
       s += `<path d="M${gx - 3},${gy} l1.5,-4 M${gx},${gy} l0,-5 M${gx + 3},${gy} l-1.5,-4" stroke="#7CC29F" stroke-width="1.2" stroke-linecap="round"/>`;
     }
     // The paved concourse round the stadium, and the avenue up to the main gate.
-    s += poly([iso(3.2, 2.8), iso(15.8, 2.8), iso(15.8, 13.2), iso(3.2, 13.2)], "#D9DDDB") +
-      `<g transform="${shearTop(3.2, 2.8, 0)}"><rect width="${12.6 * 36}" height="${10.4 * 36}" fill="url(#pt-paving)"/></g>`;
+    s += poly([iso(1.8, 1.4), iso(16.4, 1.4), iso(16.4, 13.2), iso(1.8, 13.2)], "#D9DDDB") +
+      `<g transform="${shearTop(1.8, 1.4, 0)}"><rect width="${14.6 * 36}" height="${11.8 * 36}" fill="url(#pt-paving)"/></g>`;
     s += poly([iso(9, 13.2), iso(10, 13.2), iso(10, GD + E), iso(9, GD + E)], "#D9DDDB");
     s += pitch() + goal(PITCH.x0, -1);
     return s;
