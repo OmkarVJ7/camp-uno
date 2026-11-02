@@ -1,6 +1,27 @@
 // Fixed lookups and helpers shared by the page. The live data (ITEMS, MY_LIST, RUNS, SCORE, META)
 // comes from data.js, which the app builds fresh on every load.
 
+// Text from Slack, Gmail, Frappe and files is shown as text, never run as code.
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+// Links only open if they are normal web addresses.
+function safeUrl(u) {
+  return /^https?:\/\//i.test(u || "") ? esc(u) : "#";
+}
+// Run once after data.js loads: escapes every piece of incoming text in place. MY_LIST stays raw
+// (it is saved back to its file) and is escaped where it is shown.
+function cleanData() {
+  const clean = (v, key) => {
+    if (typeof v === "string") return key === "url" ? safeUrl(v) : esc(v);
+    if (Array.isArray(v)) { v.forEach((x, i) => v[i] = clean(x, key)); return v; }
+    if (v && typeof v === "object") { for (const k of Object.keys(v)) v[k] = clean(v[k], k); }
+    return v;
+  };
+  [ITEMS, RUNS, SCORE, META, typeof RULES === "undefined" ? null : RULES].forEach(d => clean(d));
+  if (typeof BACKLOG !== "undefined") BACKLOG.url = safeUrl(BACKLOG.url);
+}
+
 // Omkar's work areas and the stages inside each.
 const AREAS = {
   bd:        { label: "BD & outreach", short: "BD", color: "#006E4A", stages: ["Leads", "Research", "Outreach", "Follow-up"] },

@@ -118,6 +118,7 @@
 <script src="helpers.js"></script>
 <script src="data.js"></script>
 <script>
+  cleanData();
   const view = document.getElementById("view");
 
   function load(key, fallback) {
@@ -194,7 +195,7 @@
   function refreshNow() {
     refreshBtn.classList.add("busy");
     refreshBtn.querySelector(".lbl").textContent = "Refreshing…";
-    fetch("/api/refresh", { method: "POST" }).finally(() => location.reload());
+    fetch("/api/refresh", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).finally(() => location.reload());
   }
   refreshBtn.addEventListener("click", refreshNow);
   window.addEventListener("message", e => { if (e.data && e.data.refresh) refreshNow(); });

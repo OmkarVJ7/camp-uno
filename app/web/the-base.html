@@ -165,6 +165,7 @@
 
   // ---------- Local state: tasks you add and things you mark done stay on this PC ----------
 
+  cleanData();
   const store = {
     get(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
@@ -201,7 +202,7 @@
 
   // A task you add goes on the track right after `afterId`, or at the end.
   function addTask(title, area, afterId) {
-    const item = { id: "L" + Date.now(), area, stage: "", src: "local", title, sub: "Added by you", when: "Today", due: "today", done: false, onTrack: true };
+    const item = { id: "L" + Date.now(), area, stage: "", src: "local", title: esc(title), sub: "Added by you", when: "Today", due: "today", done: false, onTrack: true };
     const at = afterId ? ITEMS.findIndex(i => i.id === afterId) + 1 : ITEMS.length;
     ITEMS.splice(at, 0, item);
     store.set("cc-added", ITEMS.filter(i => i.src === "local"));
@@ -873,7 +874,7 @@
     } else if (selected.kind === "list") {
       color = "#B45309"; anchor = iso(NOTICE_BOARD[0], NOTICE_BOARD[1] + 1.1, 40);
       head = `<div><div class="k">Notice board</div><h3>My list</h3></div>`;
-      body = MY_LIST.map((t, i) => `<button class="line" data-tick="${i}"><span class="tick ${t.done ? "on" : ""}">${t.done ? "✓" : ""}</span><span class="${t.done ? "struck" : ""}">${t.text}</span></button>`).join("") +
+      body = MY_LIST.map((t, i) => `<button class="line" data-tick="${i}"><span class="tick ${t.done ? "on" : ""}">${t.done ? "✓" : ""}</span><span class="${t.done ? "struck" : ""}">${esc(t.text)}</span></button>`).join("") +
         addBox("Add to my list…", "list");
     } else {
       color = "#494D4C"; anchor = iso(WATCHTOWER[0] + .5, WATCHTOWER[1] + .5, 60);

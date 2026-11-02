@@ -68,6 +68,13 @@ def keep_fresh():
 
 
 class Handler(SimpleHTTPRequestHandler):
+    def allowed(self):
+        """Answer only the app's own page. A website open in another browser could otherwise read
+        data.js or post to the API (it would send a different Sec-Fetch-Site), and a DNS trick
+        would arrive with a different Host."""
+        host_ok = self.headers.get("Host") in (f"127.0.0.1:{PORT}", f"localhost:{PORT}")
+        return host_ok and self.headers.get("Sec-Fetch-Site") in (None, "same-origin", "none")
+
     def send_body(self, status, body, content_type):
         payload = body.encode("utf-8")
         self.send_response(status)
@@ -77,6 +84,9 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(payload)
 
     def do_GET(self):
+        if not self.allowed():
+            self.send_error(403)
+            return
         path = self.path.split("?")[0]
         if path == "/data.js":
             data = dict(snapshot.current()[0] or {})
@@ -92,6 +102,10 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        # A JSON body can't be sent cross-site without the browser asking first, which we never answer.
+        if not self.allowed() or not self.headers.get("Content-Type", "").startswith("application/json"):
+            self.send_error(403)
+            return
         if self.path == "/api/refresh":
             # Refresh button: gather everything now, then the page reloads.
             try:
