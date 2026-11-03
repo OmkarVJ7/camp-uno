@@ -4,6 +4,7 @@ Serves the web folder on a fixed local port (so the page's saved settings surviv
 restarts). The page opens instantly from the last saved snapshot while fresh data
 is gathered in the background; Refresh gathers it on the spot.
 Everything the app stores stays under D:\\command-centre\\data.
+On opening it also updates itself to the latest approved version on GitHub (see updater.py).
 """
 import json
 import threading
@@ -16,6 +17,7 @@ from pathlib import Path
 import webview
 
 import collectors
+import updater
 
 ROOT = Path(__file__).resolve().parent
 WEB = ROOT / "web"
@@ -103,7 +105,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == "/api/version":
             _, version = snapshot.current()
-            self.send_body(200, json.dumps({"version": version}), "application/json")
+            self.send_body(200, json.dumps({"version": version, "update": updater.update.current()}), "application/json")
             return
         if path == "/api/feedback":
             notes = collectors.read_feedback()
@@ -195,6 +197,7 @@ def main():
         server = ThreadingHTTPServer(("127.0.0.1", PORT), partial(Handler, directory=str(WEB)))
         threading.Thread(target=server.serve_forever, daemon=True).start()
         threading.Thread(target=keep_fresh, daemon=True).start()
+        updater.start()   # move to the latest approved version on GitHub, in the background
     except OSError:
         # Port taken. If it's another Command Centre window, share its server; otherwise say so plainly.
         if not already_running():

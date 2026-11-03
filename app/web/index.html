@@ -31,6 +31,8 @@
   .refresh.fresh { border-color: var(--sm-green-800); background: var(--sm-green-bg-2); }
   .refresh.fresh .lbl::after { content: " · new data"; color: var(--sm-green-800); }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .upd { font-size: 11px; color: var(--sm-green-800); padding: 4px 6px 0; }
+  .upd a { color: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
   .conn { display: flex; align-items: center; gap: 10px; padding: 5px 8px; min-width: 0; border-radius: 6px; }
   .conn:hover { background: var(--sm-paper-p1); }
   .conn .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
@@ -107,6 +109,7 @@
   <div class="sec keep">
     <button class="refresh" id="refresh" title="Refresh now"><span class="ic">↻</span><span class="lbl">Refresh</span></button>
     <div class="now" id="refreshed"></div>
+    <div class="upd" id="upd" hidden></div>
   </div>
 
   <div class="sec">
@@ -247,11 +250,26 @@
   refreshBtn.addEventListener("click", refreshNow);
   window.addEventListener("message", e => { if (e.data && e.data.refresh) refreshNow(); });
 
+  // When the app has moved to a newer approved version from GitHub, say so and how to see it.
+  // Page changes show after a reload; changes to the app itself need it closed and opened again.
+  const upd = document.getElementById("upd");
+  function showUpdate(u) {
+    if (!u || u.status !== "updated") return;
+    // A page opened after the update already shows the new version.
+    if (!u.needsRestart && new Date(u.checkedAt) < new Date(openedAt)) return;
+    upd.hidden = false;
+    upd.innerHTML = u.needsRestart ? "New version installed · close and reopen the app to finish"
+      : 'New version installed · <a id="upd-go">reload</a>';
+    const go = document.getElementById("upd-go");
+    if (go) go.onclick = () => location.reload();
+  }
+
   // The app gathers fresh data in the background. Just after opening, show it straight away;
   // later on, only flag it, so a reload never interrupts what you're doing.
   const openedAt = Date.now();
   setInterval(() => {
-    fetch("/api/version").then(r => r.json()).then(({ version }) => {
+    fetch("/api/version").then(r => r.json()).then(({ version, update }) => {
+      showUpdate(update);
       if (version <= (META.version || 0)) return;
       if (Date.now() - openedAt < 60000) location.reload();
       else refreshBtn.classList.add("fresh");
