@@ -269,8 +269,6 @@
   const SEAT_TIERS = [{ depth: .4, h: 14 }, { depth: .5, h: 30 }, { depth: .5, h: 48 }];   // nearest the pitch first
   const STAND_GAP = .6, STAND_DEPTH = SEAT_TIERS.reduce((s, t) => s + t.depth, 0);
   const STANDS = { x0: PITCH.x0 - STAND_GAP - STAND_DEPTH, y0: PITCH.y0 - STAND_GAP - STAND_DEPTH };
-  // The back stands are drawn after everything behind them (offices, Palau, lamps) and before the pitch-side boards.
-  const STAND_Z = 15;
   // Squad training ground, kept free for the agents (players) who join later.
   const TRAINING_GROUND = [11.2, 13.6, 4.2, 1.8];
 
@@ -734,46 +732,55 @@
 
   // Seat rows in Blaugrana with a sprinkling of fans, drawn flat on a stand's pitch-facing wall.
   // The lowest tier carries a gold LED ribbon along its edge; the top tier sits on a band of glass VIP boxes.
-  const seatFace = (frame, width, height, tier) => `<g transform="${frame}"><rect width="${width}" height="${height}" fill="url(#pt-seats)"/>
+  const seatFace = (frame, width, height, tier, aisle) => `<g transform="${frame}"><rect width="${width}" height="${height}" fill="url(#pt-seats)"/>
     <rect width="${width}" height="${height}" fill="url(#pt-crowd)"/>
-    ${[0, .25, .5, .75].map(f => `<rect x="${width * f + width / 8}" width="2.2" height="${height}" fill="rgba(201,206,210,.85)"/>`).join("")}
+    ${aisle ? `<rect x="${width / 2 - 1.1}" width="2.2" height="${height}" fill="rgba(201,206,210,.85)"/>` : ""}
     <rect width="${width}" height="2" fill="${tier === 0 ? GOLD : "rgba(255,255,255,.55)"}"/>
     ${tier === 2 ? `<rect y="${height - 8}" width="${width}" height="8" fill="#16283A"/><rect y="${height - 8}" width="${width}" height="8" fill="url(#pt-vip)"/>` : ""}</g>`;
 
   // The two back stands rise in three tiers, open to the sky; their walls face the pitch.
+  // Each tier is drawn in short sections, one tile or so long, each sorted by where it stands like
+  // every other object. A single long block can't be sorted correctly against the buildings beside it.
+  // A section holds all three tiers, back tier first, so the tiers always overlap the right way.
   function backStands(objects) {
+    // Where each tier starts across the stand (its distance back from the pitch) and how tall its seat wall is.
+    let off = STAND_GAP;
+    const tiers = SEAT_TIERS.map((t, i) => { off += t.depth; return { ...t, i, back: off, face: t.h - (i ? SEAT_TIERS[i - 1].h : 0) }; }).reverse();
+    const sections = (from, to, draw) => {
+      const n = Math.ceil(to - from - .01), len = (to - from) / n;
+      for (let k = 0; k < n; k++) {
+        const a = from + k * len, b = a + len;
+        draw(a, b, tiers.map(t => {
+          // This tier's own length along the stand, cut to the section.
+          const lo = Math.max(a, t.from), hi = Math.min(b, t.to);
+          return hi - lo > .01 ? { ...t, lo, hi, aisle: k % 2 === 0 } : null;
+        }).filter(Boolean));
+      }
+    };
     // Back-right stand: runs along x on the far side (small y).
-    // Within the stands, the tiers nearest the pitch are drawn last.
-    let y = PITCH.y0 - STAND_GAP, below = 0;
-    SEAT_TIERS.forEach((t, i) => {
-      y -= t.depth;
-      const x0 = 5.2 - i * .4, x1 = 13.6 + i * .4;
-      objects.push({ z: STAND_Z + (x0 + y) / 100, svg: box(x0, y, x1 - x0, t.depth, t.h, CONCRETE) + seatFace(shearL(x0, y + t.depth, t.h), (x1 - x0) * W / 2, t.h - below, i) });
-      below = t.h;
-    });
+    tiers.forEach(t => { t.from = 5.2 - t.i * .4; t.to = 13.6 + t.i * .4; });
+    sections(tiers[0].from, tiers[0].to, (a, b, parts) => objects.push({ z: (a + b) / 2 + PITCH.y0 - (STAND_GAP + STAND_DEPTH) / 2,
+      svg: parts.map(t => { const y = PITCH.y0 - t.back, len = t.hi - t.lo;
+        return box(t.lo, y, len, t.depth, t.h, CONCRETE) + seatFace(shearL(t.lo, y + t.depth, t.h), len * W / 2, t.face, t.i, t.aisle); }).join("") }));
     // Back-left stand: runs along y on the near-left side (small x).
-    let x = PITCH.x0 - STAND_GAP; below = 0;
-    SEAT_TIERS.forEach((t, i) => {
-      x -= t.depth;
-      const y0 = 4.7 - i * .4, y1 = 10.9 + i * .4;
-      objects.push({ z: STAND_Z + (x + y0) / 100, svg: box(x, y0, t.depth, y1 - y0, t.h, CONCRETE) + seatFace(shear(x + t.depth, y1, t.h), (y1 - y0) * W / 2, t.h - below, i) });
-      below = t.h;
-    });
+    tiers.forEach(t => { t.from = 4.7 - t.i * .4; t.to = 10.9 + t.i * .4; });
+    sections(tiers[0].from, tiers[0].to, (a, b, parts) => objects.push({ z: PITCH.x0 - (STAND_GAP + STAND_DEPTH) / 2 + (a + b) / 2,
+      svg: parts.map(t => { const x = PITCH.x0 - t.back, len = t.hi - t.lo;
+        return box(x, t.lo, t.depth, len, t.h, CONCRETE) + seatFace(shear(x + t.depth, t.hi, t.h), len * W / 2, t.face, t.i, t.aisle); }).join("") }));
     // The corner that joins them: a glass-clad tower with Blaugrana fins.
-    objects.push({ z: STAND_Z - .01, svg:box(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "#2B3E55") + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "glass", false) +
+    objects.push({ z: STANDS.x0 + STANDS.y0 + 1.2, svg: box(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "#2B3E55") + walls(STANDS.x0, STANDS.y0, 1.2, 1.2, 62, "glass", false) +
       `<g transform="${shearL(STANDS.x0, STANDS.y0 + 1.2, 62)}">${[0, 1, 2, 3].map(i => `<rect x="${6 + i * 10}" width="3" height="57" fill="${i % 2 ? GRANA : BLAU}"/>`).join("")}</g>` });
   }
 
   // Advertising boards round the pitch, in alternating Blaugrana panels.
   function adBoards(objects) {
     const { x0, x1, y0, y1 } = PITCH;
-    // The far boards stand in front of the back stands, so they're drawn just after them.
     for (let x = x0; x < x1 - .01; x += 1) {
-      objects.push({ z: STAND_Z + 1, svg:box(x, y0 - .45, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? GRANA : BLAU) });
+      objects.push({ z: x + .5 + y0 - .4, svg: box(x, y0 - .45, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? GRANA : BLAU) });
       objects.push({ z: x + y1 + .6, svg: box(x, y1 + .4, Math.min(1, x1 - x), .05, 5, (x - x0) % 2 ? BLAU : GRANA) });
     }
     for (let y = y0; y < y1 - .01; y += 1) {
-      objects.push({ z: STAND_Z + 1, svg:box(x0 - .45, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? GRANA : BLAU) });
+      objects.push({ z: x0 - .4 + y + .5, svg: box(x0 - .45, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? GRANA : BLAU) });
       if (y > CENTRE[1] - 1.2 && y < CENTRE[1] + .2) continue;   // a gap behind the goal
       objects.push({ z: x1 + y + .6, svg: box(x1 + .5, y, .05, Math.min(1, y1 - y), 5, (y - y0) % 2 ? BLAU : GRANA) });
     }
@@ -840,10 +847,11 @@
         : `<circle cx="${lx}" cy="${top - 5}" r="2.6" fill="${lit ? "#FFF4C2" : "#C4C9C8"}"/>`).join("")}`;
   }
 
-  // The big screen above the back stand doubles as the scoreboard.
+  // The big screen above the back stand doubles as the scoreboard. It spans x 8 to 11.4.
+  const SCREEN_X = 8;
   function bigScreen() {
     // It stands on posts above the top tier of the back stand.
-    const top = SEAT_TIERS[SEAT_TIERS.length - 1].h, x = 8, y = STANDS.y0, w = 3.4 * W / 2, z = top + 52;
+    const top = SEAT_TIERS[SEAT_TIERS.length - 1].h, x = SCREEN_X, y = STANDS.y0, w = 3.4 * W / 2, z = top + 52;
     const score = SCORE ? `${SCORE.clients} PAYING · ${SCORE.mrr || "—"} MRR${SCORE.mrrUnconfirmed ? " (CHECK)" : ""}` : "SCOREBOARD NOT CONNECTED";
     const [a, b] = [iso(x + .4, y + .1, top), iso(x + 3, y + .1, top)];
     const posts = `<line x1="${a[0]}" y1="${a[1]}" x2="${a[0]}" y2="${a[1] - 10}" stroke="#494D4C" stroke-width="3"/><line x1="${b[0]}" y1="${b[1]}" x2="${b[0]}" y2="${b[1] - 10}" stroke="#494D4C" stroke-width="3"/>`;
@@ -1050,8 +1058,7 @@
         <text x="${cx}" y="${cy + 3.4 * k}" text-anchor="middle" font-size="${Math.max(7, 10 * k)}" font-weight="700" fill="${s.done ? "#0A7E57" : "#FCFFFE"}" font-family="Inter">${s.done ? "✓" : n}</text></g>`;
       if (n === cur) {
         path += `<ellipse class="glow" cx="${cx}" cy="${cy}" rx="${rx + 5}" ry="${ry + 3}" fill="none" stroke="${GOLD}" stroke-width="3"/>`;
-        // Kept in front of the stands even at the far corners of the pitch.
-        objects.push({ z: Math.max(c[0] + c[1], STAND_Z + 1) + .1, svg: `<g ${keep}>${ball(cx + rx * .7, cy - ry * .2)}</g>` });
+        objects.push({ z: c[0] + c[1] + .1, svg: `<g ${keep}>${ball(cx + rx * .7, cy - ry * .2)}</g>` });
       }
       path += "</g>";
     });
@@ -1061,8 +1068,8 @@
     backStands(objects);
     frontStands(objects);
     adBoards(objects);
-    // Drawn after the back stand and everything behind it (the offices and their windows), so nothing covers it.
-    objects.push({ z: STAND_Z + .5, svg: bigScreen() });
+    // Drawn after the stand sections it stands on (and everything behind them), so nothing covers it.
+    objects.push({ z: SCREEN_X + 3.4 + STANDS.y0 + 1, svg: bigScreen() });
     objects.push({ z: TRAINING_GROUND[0] + TRAINING_GROUND[1], svg: squadGround() });
     {
       const [tx, ty] = iso(TRAINING_GROUND[0] + TRAINING_GROUND[2] / 2, TRAINING_GROUND[1] + TRAINING_GROUND[3] / 2, 22);
