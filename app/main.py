@@ -148,12 +148,14 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
             return
-        if self.path in ("/api/locker", "/api/locker/delete"):
-            # Locker room notepad, kept in data\locker.json: add an entry, or delete one.
+        if self.path in ("/api/locker", "/api/locker/update", "/api/locker/delete"):
+            # Locker room notepad, kept in data\locker.json: add, change or delete an entry.
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
                 if self.path == "/api/locker":
                     collectors.add_locker(body)
+                elif self.path == "/api/locker/update":
+                    collectors.update_locker(str(body["id"]), body)
                 else:
                     collectors.delete_locker(str(body["id"]))
                 self.send_body(200, json.dumps({"entries": collectors.read_locker()}, ensure_ascii=False), "application/json")

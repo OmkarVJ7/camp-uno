@@ -432,8 +432,8 @@ def read_locker():
     return json.loads(LOCKER_FILE.read_text(encoding="utf-8"))
 
 
-def add_locker(entry):
-    """Adds one entry: a name, plus any of a web address, account ID, password and note."""
+def clean_locker_entry(entry):
+    """A name, plus any of a web address, account ID, password and note; empty fields are dropped."""
     if not isinstance(entry, dict):
         raise ValueError("expected an entry")
     clean = {k: str(entry.get(k, "")).strip()[:n] for k, n in LOCKER_FIELDS.items()}
@@ -442,7 +442,20 @@ def add_locker(entry):
         raise ValueError("an entry needs a name")
     if clean.get("url") and not re.fullmatch(r"https?://\S+", clean["url"]):
         raise ValueError("a web address starts with http:// or https://")
-    entries = read_locker() + [{"id": uuid.uuid4().hex[:8], **clean}]
+    return clean
+
+
+def add_locker(entry):
+    entries = read_locker() + [{"id": uuid.uuid4().hex[:8], **clean_locker_entry(entry)}]
+    write_atomic(LOCKER_FILE, json.dumps(entries, indent=2, ensure_ascii=False))
+
+
+def update_locker(entry_id, entry):
+    """Replaces one entry's fields, keeping its place in the list."""
+    clean, entries = clean_locker_entry(entry), read_locker()
+    if not any(e.get("id") == entry_id for e in entries):
+        raise ValueError("that entry is gone")
+    entries = [{"id": entry_id, **clean} if e.get("id") == entry_id else e for e in entries]
     write_atomic(LOCKER_FILE, json.dumps(entries, indent=2, ensure_ascii=False))
 
 

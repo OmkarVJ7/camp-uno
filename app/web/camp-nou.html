@@ -127,6 +127,9 @@
   .lform input { min-width: 0; border: 1.5px solid var(--ui-line); background: var(--ui-bg); color: var(--ui-ink); border-radius: 8px; padding: 6px 8px; font: 12px var(--sm-font-sans); }
   .lform input:focus { outline: 2px solid var(--sm-green-500); border-color: transparent; }
   .lform .wide { grid-column: 1 / -1; }
+  .lform .k-edit { font-size: 12px; color: var(--ui-sub); }
+  .lsearch { width: 100%; border: 1.5px solid var(--ui-line); background: var(--ui-bg); color: var(--ui-ink); border-radius: 8px; padding: 6px 10px; font: 13px var(--sm-font-sans); margin-bottom: 6px; }
+  .lsearch:focus { outline: 2px solid var(--sm-green-500); border-color: transparent; }
   .late { color: var(--sm-red-700) !important; font-weight: 600; }
   body.dark .late { color: var(--sm-red-300) !important; }
   .line { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--ui-line); font-size: 13px; }
@@ -1251,6 +1254,7 @@
   // Detail pop-up for whatever is selected, placed beside it.
   function renderPop(steps) {
     const pop = document.getElementById("pop");
+    if (!selected || selected.kind !== "locker") lockerEditing = null;   // closing the locker drops a half-done edit
     if (!selected) { pop.hidden = true; return; }
     let head, body, color, anchor;
     const p = progress();
@@ -1298,11 +1302,16 @@
       const [x, y, w, d] = LOCKER_ROOM;
       color = BLAU; anchor = iso(x + w / 2, y + d / 2, 40);
       head = `<div><div class="k">Locker room</div><h3>Links and logins</h3></div>`;
-      body = (LOCKER === null ? '<div class="muted">Opening…</div>' : LOCKER.length ? LOCKER.map(lockerRow).join("") : '<div class="muted">Empty. Add a link or a login below.</div>') +
-        `<form class="lform" data-locker><input name="label" class="wide" placeholder="Name, e.g. Staging admin" maxlength="60" autocomplete="off">
-          <input name="url" class="wide" placeholder="Link (optional), https://…" autocomplete="off">
-          <input name="user" placeholder="Account ID" autocomplete="off"><input name="password" type="password" placeholder="Password" autocomplete="new-password">
-          <input name="note" class="wide" placeholder="Note (optional)" autocomplete="off"><button class="btn2 wide">Add to locker</button></form>
+      // The form adds a new entry, or (after Edit) changes that one in place.
+      const ed = lockerEditing && (LOCKER || []).find(e => e.id === lockerEditing) || {}, v = k => esc(ed[k] || "");
+      body = (LOCKER && LOCKER.length > 6 ? `<input class="lsearch" placeholder="Search the locker…" value="${esc(lockerQuery)}" autocomplete="off">` : "") +
+        (LOCKER === null ? '<div class="muted">Opening…</div>' : LOCKER.length ? LOCKER.map(lockerRow).join("") : '<div class="muted">Empty. Add a link or a login below.</div>') +
+        `<form class="lform" data-locker>${ed.id ? `<div class="wide k-edit">Editing <b>${v("label")}</b></div>` : ""}
+          <input name="label" class="wide" placeholder="Name, e.g. Staging admin" maxlength="60" autocomplete="off" value="${v("label")}">
+          <input name="url" class="wide" placeholder="Link (optional), https://…" autocomplete="off" value="${v("url")}">
+          <input name="user" placeholder="Account ID" autocomplete="off" value="${v("user")}"><input name="password" type="password" placeholder="Password" autocomplete="new-password" value="${v("password")}">
+          <input name="note" class="wide" placeholder="Note (optional)" autocomplete="off" value="${v("note")}">
+          ${ed.id ? `<button class="btn2">Save changes</button><button class="btn2" type="button" data-lcancel>Cancel</button>` : '<button class="btn2 wide">Add to locker</button>'}</form>
         <div class="note">For low-risk accounts only, like test logins. Saved as plain text on this PC (data\\locker.json), never on GitHub.</div>`;
     } else if (selected.kind === "list") {
       color = "#B45309"; anchor = iso(NOTICE_BOARD[0], NOTICE_BOARD[1] + 1.1, 40);
@@ -1328,11 +1337,13 @@
   // ---------- Locker room ----------
 
   // Entries come from the app (data\locker.json). A password only appears on the page when you press Show.
-  let LOCKER = null;
+  let LOCKER = null, lockerEditing = null, lockerQuery = "";
   const loadLocker = () => fetch("/api/locker").then(r => r.json()).then(d => { LOCKER = d.entries; if (selected && selected.kind === "locker") render(); }).catch(() => {});
   loadLocker();
-  const lockerRow = e => `<div class="lk"><div class="t"><b>${e.url ? `<a href="${safeUrl(e.url)}" target="_blank">${esc(e.label)}</a>` : esc(e.label)}</b>
-      ${e.url ? `<button class="s" data-copy="${esc(e.url)}">Copy link</button>` : ""}<button class="s" data-ldel="${esc(e.id)}">Delete</button></div>
+  // Search matches the name, link, account ID and note (never the password).
+  const lockerMatch = e => !lockerQuery || [e.label, e.url, e.user, e.note].join(" ").toLowerCase().includes(lockerQuery.toLowerCase());
+  const lockerRow = e => `<div class="lk" ${lockerMatch(e) ? "" : "hidden"} data-lrow="${esc([e.label, e.url, e.user, e.note].join(" ").toLowerCase())}"><div class="t"><b>${e.url ? `<a href="${safeUrl(e.url)}" target="_blank">${esc(e.label)}</a>` : esc(e.label)}</b>
+      ${e.url ? `<button class="s" data-copy="${esc(e.url)}">Copy link</button>` : ""}<button class="s" data-ledit="${esc(e.id)}">Edit</button><button class="s" data-ldel="${esc(e.id)}">Delete</button></div>
     ${e.user ? `<div class="f">ID <code>${esc(e.user)}</code><button class="s" data-copy="${esc(e.user)}">Copy</button></div>` : ""}
     ${e.password ? `<div class="f">Password <code data-pw="${esc(e.id)}">••••••</code><button class="s" data-show="${esc(e.id)}">Show</button><button class="s" data-copypw="${esc(e.id)}">Copy</button></div>` : ""}
     ${e.note ? `<div class="f">${esc(e.note)}</div>` : ""}</div>`;
@@ -1345,9 +1356,11 @@
   }
   function lockerAct(el) {
     const entry = id => (LOCKER || []).find(e => e.id === id);
-    const b = el.closest("[data-copy], [data-copypw], [data-show], [data-ldel]");
+    const b = el.closest("[data-copy], [data-copypw], [data-show], [data-ldel], [data-ledit], [data-lcancel]");
     if (!b) return false;
-    if (b.dataset.copy !== undefined) copyText(b.dataset.copy, b);
+    if (b.dataset.ledit) { lockerEditing = b.dataset.ledit; render(); document.querySelector(".lform input").focus(); }
+    else if (b.dataset.lcancel !== undefined) { lockerEditing = null; render(); }
+    else if (b.dataset.copy !== undefined) copyText(b.dataset.copy, b);
     else if (b.dataset.copypw) copyText(entry(b.dataset.copypw).password, b);
     else if (b.dataset.show) {
       const code = document.querySelector(`[data-pw="${CSS.escape(b.dataset.show)}"]`), shown = b.textContent === "Hide";
@@ -1366,11 +1379,23 @@
     const say = text => { form.nextElementSibling.textContent = text; form.nextElementSibling.classList.add("late"); };
     if (!entry.label) return say("Give it a name first.");
     if (entry.url && !/^https?:\/\//i.test(entry.url)) return say("A link starts with http:// or https://");
-    fetch("/api/locker", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) })
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(d => { LOCKER = d.entries; render(); })
-      .catch(() => say("Couldn't save. Is the app running?"));
+    const editing = lockerEditing;
+    fetch(editing ? "/api/locker/update" : "/api/locker", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editing ? { ...entry, id: editing } : entry) })
+      .then(r => {
+        // An app opened before the Locker room existed doesn't know it yet.
+        if (r.status === 404) throw new Error("Close the app and open it again to finish updating it, then try again.");
+        if (!r.ok) throw new Error("Couldn't save that entry. Check the name and link.");
+        return r.json();
+      })
+      .then(d => { LOCKER = d.entries; lockerEditing = null; render(); })
+      .catch(err => say(err.message.startsWith("Close") || err.message.startsWith("Couldn't save that") ? err.message : "Couldn't save. Is the app running?"));
   }
+  // Typing in the search box hides entries that don't match, without redrawing (so typing isn't lost).
+  document.getElementById("pop").addEventListener("input", e => {
+    if (!e.target.classList.contains("lsearch")) return;
+    lockerQuery = e.target.value.trim();
+    document.querySelectorAll("[data-lrow]").forEach(row => row.hidden = !!lockerQuery && !row.dataset.lrow.includes(lockerQuery.toLowerCase()));
+  });
 
   // ---------- Interaction ----------
 
