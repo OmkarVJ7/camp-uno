@@ -22,11 +22,37 @@ SOURCES = [
     ("slack", "Slack"),
     ("frappe", "Frappe CRM"),
     ("gmail", "Gmail"),
-    ("calendar", "Google Calendar"),
-    ("drive", "Google Drive"),
+    ("calendar", "Calendar"),
+    ("drive", "Drive"),
     ("sheet", "Content calendar"),
     ("scoreboard", "Scoreboard"),
 ]
+
+# How each source gets new data, shown when you hover over it in the nav. Slack and the Google
+# sources are read by scheduled Claude tasks (the only part that uses Claude); the rest is read
+# by the app itself, at no Claude cost, on every refresh.
+FEED_TIMES = {"slack": [(9, 30), (13, 30), (17, 30)], **{k: [(9, 35), (13, 35), (17, 35)] for k in ("gmail", "calendar", "drive", "sheet")}}
+HOW = {
+    "slack": "Read by a scheduled Claude task at 9:30, 1:30 and 5:30 on weekdays.",
+    "gmail": "Read by a scheduled Claude task at 9:35, 1:35 and 5:35 on weekdays.",
+    "frappe": "Read straight from Frappe every 15 minutes while the app is open, and on Refresh. No Claude needed.",
+    "scoreboard": "Read from clients-and-revenue.md on every refresh. No Claude needed.",
+}
+for k in ("calendar", "drive", "sheet"):
+    HOW[k] = HOW["gmail"]
+
+
+def next_feed_run(key, now):
+    """When a scheduled feed next runs (weekdays only), or None for sources the app reads itself."""
+    for days in range(8):
+        day = now + timedelta(days=days)
+        if day.weekday() >= 5:
+            continue
+        for h, m in FEED_TIMES.get(key, []):
+            at = day.replace(hour=h, minute=m, second=0, microsecond=0)
+            if at > now:
+                return at.isoformat(timespec="minutes")
+    return None
 
 # ---------- Frappe ----------
 
@@ -459,6 +485,7 @@ def collect():
         "SCORE": score,
         "META": {
             "refreshedAt": datetime.now().isoformat(timespec="seconds"),
-            "sources": [{"key": key, "label": label, **status[key]} for key, label in SOURCES],
+            "sources": [{"key": key, "label": label, **status[key], "how": HOW[key], "next": next_feed_run(key, now)}
+                        for key, label in SOURCES],
         },
     }

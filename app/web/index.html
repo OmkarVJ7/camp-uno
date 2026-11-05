@@ -107,7 +107,7 @@
   <div class="brand"><img src="springmoney-mark.svg" alt=""><b>Command Centre</b><button class="collapse" id="collapse" title="Collapse menu" aria-label="Collapse menu">«</button></div>
 
   <div class="sec keep">
-    <button class="refresh" id="refresh" title="Refresh now"><span class="ic">↻</span><span class="lbl">Refresh</span></button>
+    <button class="refresh" id="refresh" title="Re-reads Frappe, the scoreboard and the latest Slack and Google updates now. Free: uses no Claude. Slack and Google themselves get new data at their scheduled times (hover a connection to see when)."><span class="ic">↻</span><span class="lbl">Refresh</span></button>
     <div class="now" id="refreshed"></div>
     <div class="upd" id="upd" hidden></div>
   </div>
@@ -192,16 +192,25 @@
   }
 
   const STATUS = {
-    ok: ["d-ok", s => "Updated " + hhmm(s.refreshedAt)],
+    ok: ["d-ok", s => (s.next ? "" : "Updated ") + hhmm(s.refreshedAt)],
     stale: ["d-stale", s => "Stale · " + hhmm(s.refreshedAt)],
     error: ["d-err", () => "Problem"],
     not_connected: ["d-off", () => "Not connected"],
   };
 
+  // When a scheduled source next gets new data ("10:29 → ~13:30", or "→ ~Mon 09:30" after a weekend).
+  // The "~" is because the scheduled runs start within a few minutes of their time.
+  function nextRun(s) {
+    if (!s.next) return "";
+    const at = new Date(s.next), day = at.toDateString() === new Date().toDateString() ? "" : at.toLocaleDateString("en-IN", { weekday: "short" }) + " ";
+    return ` → ~${day}${hhmm(s.next)}`;
+  }
+
   function renderConnections() {
     document.getElementById("conns").innerHTML = META.sources.map(s => {
       const [cls, text] = STATUS[s.status] || STATUS.not_connected;
-      return `<div class="conn s-${s.status}" title="${s.note || ""}"><span class="dot ${cls}"></span><span class="nm">${s.label}</span><span class="st">${text(s)}</span></div>`;
+      const tip = [s.note, s.how].filter(Boolean).join("\n");
+      return `<div class="conn s-${s.status}" title="${esc(tip)}"><span class="dot ${cls}"></span><span class="nm">${s.label}</span><span class="st">${text(s)}${nextRun(s)}</span></div>`;
     }).join("");
     document.getElementById("refreshed").textContent = "Last refreshed " + hhmm(META.refreshedAt);
   }
