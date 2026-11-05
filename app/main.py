@@ -111,6 +111,9 @@ class Handler(SimpleHTTPRequestHandler):
             notes = collectors.read_feedback()
             self.send_body(200, json.dumps({"count": len(notes), "notes": notes}, ensure_ascii=False), "application/json")
             return
+        if path == "/api/links":
+            self.send_body(200, json.dumps({"links": collectors.read_links()}, ensure_ascii=False), "application/json")
+            return
         super().do_GET()
 
     def do_POST(self):
@@ -137,6 +140,19 @@ class Handler(SimpleHTTPRequestHandler):
                     collectors.delete_feedback(int(body["line"]), body["text"])
                 notes = collectors.read_feedback()
                 self.send_body(200, json.dumps({"count": len(notes), "notes": notes}, ensure_ascii=False), "application/json")
+            except (ValueError, TypeError, KeyError, AttributeError, IndexError, OSError):
+                self.send_response(400)
+                self.end_headers()
+            return
+        if self.path in ("/api/links", "/api/links/delete"):
+            # Pinned links, kept in data\links.md: add one, or delete one.
+            try:
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                if self.path == "/api/links":
+                    collectors.add_link(body.get("label", ""), body.get("url", ""), body.get("note", ""))
+                else:
+                    collectors.delete_link(int(body["line"]), body["url"])
+                self.send_body(200, json.dumps({"links": collectors.read_links()}, ensure_ascii=False), "application/json")
             except (ValueError, TypeError, KeyError, AttributeError, IndexError, OSError):
                 self.send_response(400)
                 self.end_headers()

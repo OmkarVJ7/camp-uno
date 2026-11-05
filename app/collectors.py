@@ -405,6 +405,57 @@ def delete_feedback(line, text):
     write_atomic(FEEDBACK_FILE, "\n".join(lines) + "\n")
 
 
+# ---------- Pinned links (quick reference, kept in data\links.md) ----------
+# Links only, never passwords: anything saved here can be read by any program on the PC.
+# Passwords stay in a password manager; the board links to it.
+
+LINKS_FILE = DATA / "links.md"
+LINK_LINE = re.compile(r"^- \[(.+?)\]\((https?://\S+?)\)(?: · (.*))?$")
+LINKS_HEADER = ("# Pinned links\n\n_Quick-reference links for the Command Centre. Links only: keep passwords "
+                "in your password manager._\n\n")
+STARTER_LINKS = [
+    ("Frappe CRM", f"{FRAPPE}/app/lead", "Leads"),
+    ("Passwords", "https://passwords.google.com", "Google Password Manager: logins live here, not in the app"),
+    ("Spring Money", "https://spring.money", ""),
+]
+
+
+def link_line(label, url, note):
+    return f"- [{label}]({url})" + (f" · {note}" if note else "")
+
+
+def read_links():
+    """The pinned links in file order, each with its line number (used to delete it)."""
+    if not LINKS_FILE.exists():
+        write_atomic(LINKS_FILE, LINKS_HEADER + "".join(link_line(*l) + "\n" for l in STARTER_LINKS))
+    links = []
+    for n, line in enumerate(LINKS_FILE.read_text(encoding="utf-8").splitlines()):
+        m = LINK_LINE.match(line)
+        if m:
+            links.append({"line": n, "label": m.group(1), "url": m.group(2), "note": m.group(3) or ""})
+    return links
+
+
+def add_link(label, url, note=""):
+    label, url, note = (" ".join(str(v).split()) for v in (label, url, note))
+    label = label.replace("[", "(").replace("]", ")")
+    if not label or not re.fullmatch(r"https?://\S+", url) or ")" in url:
+        raise ValueError("a link needs a name and a web address starting with http:// or https://")
+    read_links()   # makes the file if it isn't there yet
+    with LINKS_FILE.open("a", encoding="utf-8") as f:
+        f.write(link_line(label, url, note) + "\n")
+
+
+def delete_link(line, url):
+    """Removes one link. The address must still match, so a stale screen can't delete the wrong one."""
+    lines = LINKS_FILE.read_text(encoding="utf-8").splitlines()
+    m = LINK_LINE.match(lines[line]) if 0 <= line < len(lines) else None
+    if not m or m.group(2) != url:
+        raise ValueError("that link has changed; reopen the list")
+    del lines[line]
+    write_atomic(LINKS_FILE, "\n".join(lines) + "\n")
+
+
 def frappe_rules():
     """The sorting rules above, in a form the page can show as-is."""
     areas = {}
