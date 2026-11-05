@@ -30,6 +30,7 @@ const AREAS = {
   company:   { label: "Company", short: "Company", color: "#494D4C", stages: ["Pitch deck", "Projections"] },
   marketing: { label: "Marketing", short: "Mktg", color: "#0E5235", stages: ["Campaign", "Collateral", "Posting"] },
   other:     { label: "Other", short: "Other", color: "#686D6C", stages: [] },
+  hr:        { label: "HR & people", short: "HR", color: "#6941C6", stages: ["Attendance", "Leave"] },
 };
 
 // Where each item comes from.
@@ -40,6 +41,7 @@ const SOURCES = {
   calendar: { label: "Calendar", tag: "CAL", color: "#2E6FD8", from: "Google Calendar" },
   drive:    { label: "Drive", tag: "DRIVE", color: "#B45309", from: "Google Drive" },
   sheet:    { label: "Content calendar", tag: "SHEET", color: "#686D6C", from: "Google Sheet" },
+  hrms:     { label: "Frappe HR", tag: "HR", color: "#6941C6", from: "Frappe HR" },
   local:    { label: "My tasks", tag: "MINE", color: "#0A7E57", from: "Added by you" },
 };
 
@@ -54,7 +56,7 @@ const CHANNELS = {
   communication: { label: "Communication", color: "#0E5235", sources: ["slack", "gmail"] },
   calendar:      { label: "Calendar", color: "#2E6FD8", sources: ["calendar"] },
   documents:     { label: "Documents", color: "#B45309", sources: ["drive", "sheet"] },
-  crm:           { label: "CRM", color: "#006E4A", sources: ["frappe"] },
+  crm:           { label: "Frappe", color: "#006E4A", sources: ["frappe", "hrms"] },
   local:         { label: "My tasks", color: "#0A7E57", sources: ["local"] },
 };
 const CHANNEL_OF = Object.fromEntries(Object.entries(CHANNELS).flatMap(([k, c]) => c.sources.map(s => [s, k])));

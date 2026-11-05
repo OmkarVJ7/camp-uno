@@ -285,14 +285,14 @@
   // Squad training ground, kept free for the agents (players) who join later.
   const TRAINING_GROUND = [11.2, 13.6, 4.2, 1.8];
 
-  // Landmarks around the stadium, one per work area (in AREAS order), plus a spare for "My tasks".
+  // Landmarks around the stadium, one per work area (in AREAS order); the last is the HR office.
   // None sits in front of the pitch, so nothing hides a task.
   // [x, y, width, depth]. Club offices and Ciutat Esportiva run the length of the back stand;
   // La Masia and Palau stand together on the left side.
   // They stand back from the stands, leaving a wide concourse where the crowds gather.
   const BUILDING_SLOTS = [[10.1, -1.4, 4.7, 2.4], [4.8, -1.2, 4.6, 2.1], [-.6, 3.5, 2, 2], [-.6, 6.6, 2, 2], [16.8, 5.2, 2, 2], [5.6, 13.8, 2, 2], [-.6, 9.7, 2, 2]];
   const STYLES = ["training", "office", "masia", "arena", "museum", "fanzone", "house"];
-  const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "Manager's house" };
+  const LANDMARKS = { training: "Ciutat Esportiva", office: "Club offices", masia: "La Masia", arena: "Palau", museum: "Museum & shop", fanzone: "Fan zone", house: "HR office" };
   const NOTICE_BOARD = [1.4, 12.4], WATCHTOWER = [17, 13.6];
   // Locker room: a quick-reference notepad (links, account IDs, passwords for low-risk accounts).
   const LOCKER_ROOM = [3.0, 13.8, 1.8, 1.4];

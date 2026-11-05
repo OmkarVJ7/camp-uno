@@ -157,6 +157,26 @@ def frappe_items(today):
     return items, backlog, result
 
 
+# ---------- HR reminders (Frappe HR, on the same site) ----------
+# Two standing reminders for the HR office: mark attendance every working day, and check leave
+# applications once a week (from Monday until done). Marking one done lasts for that day or week.
+
+def hr_items(today):
+    if today.weekday() >= 5:
+        return []
+    monday = today - timedelta(days=today.weekday())
+    late = (today - monday).days
+    return [
+        {"id": "hr-attendance", "stamp": today.isoformat(), "area": "hr", "stage": "Attendance", "src": "hrms",
+         "title": "Mark today's attendance", "sub": "Once a day · Frappe HR", "when": "Today", "due": "today",
+         "late": 0, "priority": 2, "done": False, "url": f"{FRAPPE}/app/attendance"},
+        {"id": "hr-leave", "stamp": monday.isoformat(), "area": "hr", "stage": "Leave", "src": "hrms",
+         "title": "Check leave applications", "sub": "Once a week · approve or reject open requests in Frappe HR",
+         "when": "Today" if not late else f"Since Monday · {plural(late, 'day')} late", "due": "overdue" if late else "today",
+         "late": late, "priority": 3, "done": False, "url": f"{FRAPPE}/app/leave-application?status=Open"},
+    ]
+
+
 # ---------- Feeds written by scheduled Claude tasks (Slack first) ----------
 
 FEEDS = DATA / "feeds"
@@ -455,6 +475,8 @@ def frappe_rules():
             "Later posts, and invites more than a day away, wait after the Frappe follow-ups.",
             "Meetings you've accepted and things only worth a look (Drive files, FYI messages) go last.",
             "Each item sits in the building for its work area; Claude picks the area when it reads the source.",
+            "The HR office adds two reminders on working days: mark attendance (daily) and check leave "
+            "applications (from Monday until you mark it done that week).",
         ],
     }
 
@@ -486,6 +508,7 @@ def collect():
     today, now = date.today(), datetime.now()
     status = {key: not_connected() for key, _ in SOURCES}
     items, backlog, status["frappe"] = frappe_items(today)
+    items += hr_items(today)
     runs = []
     for src in FEEDS_FROM_CLAUDE:
         feed_items, feed_runs, status[src] = read_feed(src, now)
