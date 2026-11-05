@@ -43,11 +43,14 @@ class Snapshot:
             except ValueError:
                 pass
 
-    def refresh(self):
+    def refresh(self, source=None):
+        """Gather everything, or just one connection (its ↻ button in the nav)."""
         # If a round is already running, wait for it rather than gathering twice at once;
         # the caller then gets that round's (fresh) result.
         with self.refreshing:
-            data = collectors.collect()
+            with self.lock:
+                base = self.data
+            data = collectors.refresh_source(base, source) if source and base else collectors.collect()
             with self.lock:
                 self.version += 1
                 data["META"]["version"] = self.version
@@ -111,8 +114,8 @@ class Handler(SimpleHTTPRequestHandler):
             notes = collectors.read_feedback()
             self.send_body(200, json.dumps({"count": len(notes), "notes": notes}, ensure_ascii=False), "application/json")
             return
-        if path == "/api/links":
-            self.send_body(200, json.dumps({"links": collectors.read_links()}, ensure_ascii=False), "application/json")
+        if path == "/api/locker":
+            self.send_body(200, json.dumps({"entries": collectors.read_locker()}, ensure_ascii=False), "application/json")
             return
         super().do_GET()
 
@@ -122,9 +125,10 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_error(403)
             return
         if self.path == "/api/refresh":
-            # Refresh button: gather everything now, then the page reloads.
+            # Refresh button: gather everything now (or one connection), then the page reloads.
             try:
-                snapshot.refresh()
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                snapshot.refresh(body.get("source") if isinstance(body, dict) else None)
                 self.send_response(204)
             except Exception:
                 self.send_response(500)
@@ -144,15 +148,15 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_response(400)
                 self.end_headers()
             return
-        if self.path in ("/api/links", "/api/links/delete"):
-            # Pinned links, kept in data\links.md: add one, or delete one.
+        if self.path in ("/api/locker", "/api/locker/delete"):
+            # Locker room notepad, kept in data\locker.json: add an entry, or delete one.
             try:
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-                if self.path == "/api/links":
-                    collectors.add_link(body.get("label", ""), body.get("url", ""), body.get("note", ""))
+                if self.path == "/api/locker":
+                    collectors.add_locker(body)
                 else:
-                    collectors.delete_link(int(body["line"]), body["url"])
-                self.send_body(200, json.dumps({"links": collectors.read_links()}, ensure_ascii=False), "application/json")
+                    collectors.delete_locker(str(body["id"]))
+                self.send_body(200, json.dumps({"entries": collectors.read_locker()}, ensure_ascii=False), "application/json")
             except (ValueError, TypeError, KeyError, AttributeError, IndexError, OSError):
                 self.send_response(400)
                 self.end_headers()

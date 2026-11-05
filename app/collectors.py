@@ -8,6 +8,7 @@ import json
 import re
 import urllib.parse
 import urllib.request
+import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -30,29 +31,16 @@ SOURCES = [
 
 # How each source gets new data, shown when you hover over it in the nav. Slack and the Google
 # sources are read by scheduled Claude tasks (the only part that uses Claude); the rest is read
-# by the app itself, at no Claude cost, on every refresh.
-FEED_TIMES = {"slack": [(9, 30), (13, 30), (17, 30)], **{k: [(9, 35), (13, 35), (17, 35)] for k in ("gmail", "calendar", "drive", "sheet")}}
+# by the app itself, at no Claude cost.
 HOW = {
-    "slack": "Read by a scheduled Claude task at 9:30, 1:30 and 5:30 on weekdays.",
-    "gmail": "Read by a scheduled Claude task at 9:35, 1:35 and 5:35 on weekdays.",
-    "frappe": "Read straight from Frappe every 15 minutes while the app is open, and on Refresh. No Claude needed.",
-    "scoreboard": "Read from clients-and-revenue.md on every refresh. No Claude needed.",
+    "slack": "Claude reads Slack at 9:30, 1:30 and 5:30 on weekdays. ↻ picks up its latest reading.",
+    "gmail": "Claude reads Google at 9:35, 1:35 and 5:35 on weekdays. ↻ picks up its latest reading.",
+    "frappe": "Read straight from Frappe every 15 minutes while the app is open. ↻ reads it now (no Claude needed).",
+    "scoreboard": "Read from clients-and-revenue.md. ↻ reads it now (no Claude needed).",
 }
 for k in ("calendar", "drive", "sheet"):
     HOW[k] = HOW["gmail"]
-
-
-def next_feed_run(key, now):
-    """When a scheduled feed next runs (weekdays only), or None for sources the app reads itself."""
-    for days in range(8):
-        day = now + timedelta(days=days)
-        if day.weekday() >= 5:
-            continue
-        for h, m in FEED_TIMES.get(key, []):
-            at = day.replace(hour=h, minute=m, second=0, microsecond=0)
-            if at > now:
-                return at.isoformat(timespec="minutes")
-    return None
+FEEDS_FROM_CLAUDE = ("slack", "gmail", "calendar", "drive", "sheet")
 
 # ---------- Frappe ----------
 
@@ -405,55 +393,45 @@ def delete_feedback(line, text):
     write_atomic(FEEDBACK_FILE, "\n".join(lines) + "\n")
 
 
-# ---------- Pinned links (quick reference, kept in data\links.md) ----------
-# Links only, never passwords: anything saved here can be read by any program on the PC.
-# Passwords stay in a password manager; the board links to it.
+# ---------- Locker room (quick-reference notepad, kept in data\locker.json) ----------
+# Links, account IDs and passwords for low-risk accounts (testing and the like), as Omkar chose.
+# The file stays on this PC (never on GitHub) and is plain text: important logins belong in a
+# password manager.
 
-LINKS_FILE = DATA / "links.md"
-LINK_LINE = re.compile(r"^- \[(.+?)\]\((https?://\S+?)\)(?: · (.*))?$")
-LINKS_HEADER = ("# Pinned links\n\n_Quick-reference links for the Command Centre. Links only: keep passwords "
-                "in your password manager._\n\n")
-STARTER_LINKS = [
-    ("Frappe CRM", f"{FRAPPE}/app/lead", "Leads"),
-    ("Passwords", "https://passwords.google.com", "Google Password Manager: logins live here, not in the app"),
-    ("Spring Money", "https://spring.money", ""),
+LOCKER_FILE = DATA / "locker.json"
+LOCKER_FIELDS = {"label": 60, "url": 400, "user": 120, "password": 200, "note": 300}   # field: max length
+STARTER_LOCKER = [
+    {"label": "Frappe CRM", "url": f"{FRAPPE}/app/lead", "note": "Leads"},
+    {"label": "Spring Money", "url": "https://spring.money"},
 ]
 
 
-def link_line(label, url, note):
-    return f"- [{label}]({url})" + (f" · {note}" if note else "")
+def read_locker():
+    if not LOCKER_FILE.exists():
+        write_atomic(LOCKER_FILE, json.dumps([{"id": uuid.uuid4().hex[:8], **e} for e in STARTER_LOCKER], indent=2))
+    return json.loads(LOCKER_FILE.read_text(encoding="utf-8"))
 
 
-def read_links():
-    """The pinned links in file order, each with its line number (used to delete it)."""
-    if not LINKS_FILE.exists():
-        write_atomic(LINKS_FILE, LINKS_HEADER + "".join(link_line(*l) + "\n" for l in STARTER_LINKS))
-    links = []
-    for n, line in enumerate(LINKS_FILE.read_text(encoding="utf-8").splitlines()):
-        m = LINK_LINE.match(line)
-        if m:
-            links.append({"line": n, "label": m.group(1), "url": m.group(2), "note": m.group(3) or ""})
-    return links
+def add_locker(entry):
+    """Adds one entry: a name, plus any of a web address, account ID, password and note."""
+    if not isinstance(entry, dict):
+        raise ValueError("expected an entry")
+    clean = {k: str(entry.get(k, "")).strip()[:n] for k, n in LOCKER_FIELDS.items()}
+    clean = {k: v for k, v in clean.items() if v}
+    if not clean.get("label"):
+        raise ValueError("an entry needs a name")
+    if clean.get("url") and not re.fullmatch(r"https?://\S+", clean["url"]):
+        raise ValueError("a web address starts with http:// or https://")
+    entries = read_locker() + [{"id": uuid.uuid4().hex[:8], **clean}]
+    write_atomic(LOCKER_FILE, json.dumps(entries, indent=2, ensure_ascii=False))
 
 
-def add_link(label, url, note=""):
-    label, url, note = (" ".join(str(v).split()) for v in (label, url, note))
-    label = label.replace("[", "(").replace("]", ")")
-    if not label or not re.fullmatch(r"https?://\S+", url) or ")" in url:
-        raise ValueError("a link needs a name and a web address starting with http:// or https://")
-    read_links()   # makes the file if it isn't there yet
-    with LINKS_FILE.open("a", encoding="utf-8") as f:
-        f.write(link_line(label, url, note) + "\n")
-
-
-def delete_link(line, url):
-    """Removes one link. The address must still match, so a stale screen can't delete the wrong one."""
-    lines = LINKS_FILE.read_text(encoding="utf-8").splitlines()
-    m = LINK_LINE.match(lines[line]) if 0 <= line < len(lines) else None
-    if not m or m.group(2) != url:
-        raise ValueError("that link has changed; reopen the list")
-    del lines[line]
-    write_atomic(LINKS_FILE, "\n".join(lines) + "\n")
+def delete_locker(entry_id):
+    entries = read_locker()
+    kept = [e for e in entries if e.get("id") != entry_id]
+    if len(kept) == len(entries):
+        raise ValueError("that entry is already gone")
+    write_atomic(LOCKER_FILE, json.dumps(kept, indent=2, ensure_ascii=False))
 
 
 def frappe_rules():
@@ -509,7 +487,7 @@ def collect():
     status = {key: not_connected() for key, _ in SOURCES}
     items, backlog, status["frappe"] = frappe_items(today)
     runs = []
-    for src in ("slack", "gmail", "calendar", "drive", "sheet"):
+    for src in FEEDS_FROM_CLAUDE:
         feed_items, feed_runs, status[src] = read_feed(src, now)
         items += feed_items
         runs += feed_runs
@@ -536,7 +514,31 @@ def collect():
         "SCORE": score,
         "META": {
             "refreshedAt": datetime.now().isoformat(timespec="seconds"),
-            "sources": [{"key": key, "label": label, **status[key], "how": HOW[key], "next": next_feed_run(key, now)}
-                        for key, label in SOURCES],
+            "sources": [{"key": key, "label": label, **status[key], "how": HOW[key]} for key, label in SOURCES],
         },
     }
+
+
+def refresh_source(data, key):
+    """The same data with one source gathered again (a connection's ↻ button); the rest is kept."""
+    today, now = date.today(), datetime.now()
+    data = json.loads(json.dumps(data))   # a copy, so a failed round leaves the shared data untouched
+    new = None
+    if key == "frappe":
+        new, backlog, status = frappe_items(today)
+        data["BACKLOG"]["counts"] = backlog
+    elif key in FEEDS_FROM_CLAUDE:
+        new, runs, status = read_feed(key, now)
+        if key == "slack":   # only the Slack feed reports the scheduled check-ins
+            data["RUNS"] = runs
+    elif key == "scoreboard":
+        data["SCORE"], status = scoreboard()
+    else:
+        raise ValueError("unknown connection")
+    if new is not None:
+        data["ITEMS"] = sorted([i for i in data["ITEMS"] if i.get("src") != key] + new,
+                               key=lambda i: (i["priority"], -i["late"]))
+    for s in data["META"]["sources"]:
+        if s["key"] == key:
+            s.update({"status": "error", "refreshedAt": None, "note": ""}, **status)
+    return data
